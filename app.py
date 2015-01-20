@@ -208,9 +208,7 @@ class MyForm(QtGui.QMainWindow):
 			# get last shot
 
 			if self.shotInfo : 
-				item = self.ui.listWidget.item(allRow - 1)
-				customWidget = self.ui.listWidget.itemWidget(item)
-				lastShot = customWidget.texts()[0]
+				lastShot = self.getCurrentIndexWidgetItem(allRow - 1)[0]
 
 				lastShotNum = re.findall('\d+', lastShot)[0]
 				newLastShot = ((int(lastShotNum)/10) * 10) + 10
@@ -236,19 +234,13 @@ class MyForm(QtGui.QMainWindow):
 				prevIndex = currentIndex - 1
 				nextIndex = currentIndex + 1
 
-				item = self.ui.listWidget.item(currentIndex)
-				customWidget = self.ui.listWidget.itemWidget(item)
-				currentShot = customWidget.texts()[0]
+				currentShot = self.getCurrentIndexWidgetItem(currentIndex)[0]
 
 				if prevIndex >= 0 : 
-					item = self.ui.listWidget.item(prevIndex)
-					customWidget = self.ui.listWidget.itemWidget(item)
-					prevShot = customWidget.texts()[0]
+					prevShot = self.getCurrentIndexWidgetItem(prevIndex)[0]
 
 				if nextIndex <= allRow - 1 : 
-					item = self.ui.listWidget.item(nextIndex)
-					customWidget = self.ui.listWidget.itemWidget(item)
-					nextShot = customWidget.texts()[0]
+					nextShot = self.getCurrentIndexWidgetItem(nextIndex)[0]
 
 
 				# calculate shot
@@ -302,9 +294,7 @@ class MyForm(QtGui.QMainWindow):
 			allRow = self.ui.listWidget.count()
 
 			# get last shot
-			item = self.ui.listWidget.item(allRow - 1)
-			customWidget = self.ui.listWidget.itemWidget(item)
-			lastShotInfo = customWidget.texts()
+			lastShotInfo = self.getCurrentIndexWidgetItem(allRow - 1)
 
 			endFrame = int(float(lastShotInfo[3]))
 
@@ -379,9 +369,8 @@ class MyForm(QtGui.QMainWindow):
 
 		# 1 item is selected
 		if self.ui.listWidget.currentItem() : 
-			item = self.ui.listWidget.currentItem()
-			customWidget = self.ui.listWidget.itemWidget(item)
-			itemInfo = customWidget.texts()
+
+			itemInfo = self.getCurrentWidgetItem()
 
 			itemIndex = int(self.ui.listWidget.currentRow())
 
@@ -467,7 +456,7 @@ class MyForm(QtGui.QMainWindow):
 
 	def moveShotCmd(self) : 
 		# selected shot
-		item = self.ui.listWidget
+		item = self.getCurrentWidgetItem()
 
 
 	def extendTailShot(self, currentIndex, extendFrame) : 
@@ -475,9 +464,7 @@ class MyForm(QtGui.QMainWindow):
 		count = self.ui.listWidget.count()
 
 		for i in reversed(range(currentIndex, count)) : 
-			item = self.ui.listWidget.item(i)
-			customWidget = self.ui.listWidget.itemWidget(item)
-			itemInfo = customWidget.texts()
+			itemInfo = self.getCurrentIndexWidgetItem(i)
 
 			endTime = float(itemInfo[3]) + extendFrame
 			startTime = float(itemInfo[1]) + extendFrame
@@ -495,9 +482,7 @@ class MyForm(QtGui.QMainWindow):
 	def extendTailOverlap(self, currentIndex, extendFrame) : 
 		lastItem = int(self.ui.listWidget.count()) - 1
 
-		item = self.ui.listWidget.item(currentIndex)
-		customWidget = self.ui.listWidget.itemWidget(item)
-		itemInfo = customWidget.texts()
+		itemInfo = self.getCurrentIndexWidgetItem(currentIndex)
 		shotName = itemInfo[0]
 		startTime = float(itemInfo[1])
 		endTime = float(itemInfo[3])
@@ -505,9 +490,7 @@ class MyForm(QtGui.QMainWindow):
 
 
 		if not currentIndex == lastItem : 
-			nItem = self.ui.listWidget.item(currentIndex + 1)
-			nCustomWidget = self.ui.listWidget.itemWidget(nItem)
-			nItemInfo = nCustomWidget.texts()
+			nItemInfo = self.getCurrentIndexWidgetItem(currentIndex + 1)
 			nShotName = nItemInfo[0]
 			nStartTime = float(nItemInfo[1])
 			nEndTime = float(nItemInfo[3])
@@ -544,9 +527,7 @@ class MyForm(QtGui.QMainWindow):
 
 			# previous item 
 
-			prevItem = self.ui.listWidget.item(startIndex)
-			customWidget = self.ui.listWidget.itemWidget(prevItem)
-			itemInfo = customWidget.texts()
+			itemInfo = self.getCurrentIndexWidgetItem(startIndex)
 
 			pStartTime = float(itemInfo[1])
 			pEndTime = float(itemInfo[3]) - extendFrame
@@ -556,9 +537,7 @@ class MyForm(QtGui.QMainWindow):
 
 			# current ================================================
 
-			item = self.ui.listWidget.item(currentIndex)
-			customWidget = self.ui.listWidget.itemWidget(item)
-			itemInfo = customWidget.texts()
+			itemInfo = self.getCurrentIndexWidgetItem(currentIndex)
 
 			startTime = float(itemInfo[1]) - extendFrame
 			endTime = float(itemInfo[3])
@@ -590,9 +569,7 @@ class MyForm(QtGui.QMainWindow):
 
 	def trimShot(self, currentIndex, trimFrame, setStart, setEnd) : 
 
-		item = self.ui.listWidget.item(currentIndex)
-		customWidget = self.ui.listWidget.itemWidget(item)
-		shotName = customWidget.texts()[0]
+		shotName = self.getCurrentIndexWidgetItem(currentIndex)[0]
 		start = 0
 		end = 0
 
@@ -685,6 +662,14 @@ class MyForm(QtGui.QMainWindow):
 
 	def getCurrentWidgetItem(self) : 
 		item = self.ui.listWidget.currentItem()
+		customWidget = self.ui.listWidget.itemWidget(item)
+		itemInfo = customWidget.texts()
+
+		return itemInfo
+
+
+	def getCurrentIndexWidgetItem(self, index) : 
+		item = self.ui.listWidget.item(index)
 		customWidget = self.ui.listWidget.itemWidget(item)
 		itemInfo = customWidget.texts()
 
