@@ -1,0 +1,59 @@
+/*Author TA
+shiftFrame v.1.0
+This script move all keyframe according to the input from UI. 
+
+To run, type 
+shiftFrame;
+*/
+
+global proc shiftFrame()
+{
+	if (`window -e -exists shiftKeyWin`)
+	deleteUI shiftKeyWin;
+	
+	window -t "Shift Keyframe v.1.0" shiftKeyWin;
+	columnLayout -adj 1 -rs 4;
+	
+	text -l "Specify amount of keyframe to Move";
+	text -l "Enter - to move backward";
+	textField -tx 0 keyTX;
+	
+	columnLayout;
+	rowColumnLayout -nc 2 -cw 1 100 -cw 2 150 -cs 1 4 -cs 2 4;
+	radioCollection choiceRB;
+    radioButton -label "All Key" -sl b1;
+    radioButton -label "From current frame" b2;
+    
+    setParent..;
+    setParent..;
+	
+	button -l "Shift" -h 30 -c shiftFrameCmd -bgc 0.9 0.9 0;
+	
+	showWindow();
+	window -e -wh 240 120 shiftKeyWin;
+
+}
+
+
+global proc shiftFrameCmd()
+{
+
+$amount = `textField -q -tx keyTX`;
+float $frame = $amount;
+$choice = `radioCollection -q -sl choiceRB`;
+
+if ($choice == "b1")
+{
+	selectKey  -t (":") `ls -dag`;
+}
+
+if ($choice == "b2")
+{
+	selectKey  -t (`currentTime -q` + ":") `ls -dag`;
+}
+
+keyframe -e -iub 0 -an "keys" -r  -o "over" -tc $frame;
+
+print ("\n" + $frame + " has been moved completely."); 
+}
+shiftFrame;

@@ -1,0 +1,28 @@
+# root for OS
+
+root:{"windowRoot": "U:"}
+rootProject:projects/ttv/episodes
+
+# asset root
+assetRoot:projects/ttv/assets
+
+# asset project
+assetProject:ttv_assets
+
+# mayaFile ext
+ext:{"maya": "ma"}
+
+# logo file
+logo:logo2.png
+
+# default icon
+defaultIcon:camera_icon.png
+
+# camera rig
+cameraRigFile:U:/projects/ttv/assets/publish/etc/camera/rigs/hand_camera_rig_MASTER.ma
+
+# default shot length
+defaultDuration:25
+
+# default start frame
+defaultStartFrame:101
