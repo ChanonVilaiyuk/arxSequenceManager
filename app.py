@@ -73,6 +73,7 @@ class MyForm(QtGui.QMainWindow):
 		self.defaultStartFrame = self.configData['defaultStartFrame']
 
 		self.cameraRigFile = self.configData['cameraRigFile']
+		self.echo = True
 
 		self.initFunctions()
 		self.initConnections()
@@ -87,20 +88,23 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.refresh_pushButton.clicked.connect(self.refreshUI)
 		self.ui.listWidget.itemSelectionChanged.connect(self.setEditField)
 		self.ui.addShot_pushButton.clicked.connect(self.addShot)
-		self.ui.before_radioButton.toggled.connect(self.setAutoShotName)
-		self.ui.after_radioButton.toggled.connect(self.setAutoShotName)
-		self.ui.last_radioButton.toggled.connect(self.setAutoShotName)
+		self.ui.before_radioButton.toggled.connect(self.setAutoInfo)
+		self.ui.after_radioButton.toggled.connect(self.setAutoInfo)
+		self.ui.last_radioButton.toggled.connect(self.setAutoInfo)
 		self.ui.sequencer_pushButton.clicked.connect(self.openCameraSequencer)
 		self.ui.apply_pushButton.clicked.connect(self.doShotEditDuration)
 		self.ui.rebuildShot_pushButton.clicked.connect(self.rebuildSequencer)
 		self.ui.camera_checkBox.stateChanged.connect(self.setUI)
 		self.ui.moveShot_checkBox.stateChanged.connect(self.setUI)
+		self.ui.start_lineEdit.returnPressed.connect(self.setAutoStartTime)
+		self.ui.end_lineEdit.returnPressed.connect(self.setAutoEndTime)
+		self.ui.duration_lineEdit.returnPressed.connect(self.setAutoDuration)
 
 
 	def refreshUI(self) : 
 		self.shotInfo = self.getShotInfo()
 		self.listShots()
-		self.setAutoShotName()
+		self.setAutoInfo()
 		self.setShotAutoDuration()
 		self.setCameraList()
 		self.setUI()
@@ -111,6 +115,7 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.moveShot_lineEdit.setEnabled(self.ui.moveShot_checkBox.isChecked())
 		self.ui.editStart_lineEdit.setEnabled(not self.ui.moveShot_checkBox.isChecked())
 		self.ui.editEnd_lineEdit.setEnabled(not self.ui.moveShot_checkBox.isChecked())
+		self.ui.moveShot_lineEdit.setText('0')
 
 
 
@@ -188,11 +193,51 @@ class MyForm(QtGui.QMainWindow):
 				self.ui.editEnd_lineEdit.setText(str(endTime))
 				self.ui.duration_label.setText(str(duration))
 
-				self.setAutoShotName()
+				self.setAutoInfo()
 
 			else : 
 				self.ui.editStart_lineEdit.clear()
 				self.ui.editEnd_lineEdit.clear()
+
+
+
+	def setAutoStartTime(self) : 
+		startFrame = float(self.ui.start_lineEdit.text())
+		endFrame = float(self.ui.end_lineEdit.text())
+		duration = float(self.ui.duration_lineEdit.text())
+
+		newEndFrame = startFrame + duration - 1
+		newDuration = endFrame - startFrame + 1
+
+		self.ui.end_lineEdit.setText(str(newEndFrame))
+
+
+	def setAutoEndTime(self) : 
+		startFrame = float(self.ui.start_lineEdit.text())
+		endFrame = float(self.ui.end_lineEdit.text())
+		duration = float(self.ui.duration_lineEdit.text())
+
+		newStartFrame = endFrame - duration + 1
+		newDuration = endFrame - startFrame + 1
+
+		self.ui.duration_lineEdit.setText(str(newDuration))
+
+
+
+	def setAutoDuration(self) : 
+		startFrame = float(self.ui.start_lineEdit.text())
+		endFrame = float(self.ui.end_lineEdit.text())
+		duration = float(self.ui.duration_lineEdit.text())
+
+		newStartFrame = endFrame - duration + 1
+		newEndFrame = startFrame + duration - 1
+
+		self.ui.end_lineEdit.setText(str(newEndFrame))
+
+
+	def setAutoInfo(self) : 
+		self.setAutoShotName()
+		self.setShotAutoDuration()
 
 
 	def setAutoShotName(self) : 
@@ -208,7 +253,7 @@ class MyForm(QtGui.QMainWindow):
 			# get last shot
 
 			if self.shotInfo : 
-				lastShot = self.getCurrentIndexWidgetItem(allRow - 1)[0]
+				lastShot = self.getIndexWidgetItem(allRow - 1)[0]
 
 				lastShotNum = re.findall('\d+', lastShot)[0]
 				newLastShot = ((int(lastShotNum)/10) * 10) + 10
@@ -234,13 +279,13 @@ class MyForm(QtGui.QMainWindow):
 				prevIndex = currentIndex - 1
 				nextIndex = currentIndex + 1
 
-				currentShot = self.getCurrentIndexWidgetItem(currentIndex)[0]
+				currentShot = self.getIndexWidgetItem(currentIndex)[0]
 
 				if prevIndex >= 0 : 
-					prevShot = self.getCurrentIndexWidgetItem(prevIndex)[0]
+					prevShot = self.getIndexWidgetItem(prevIndex)[0]
 
 				if nextIndex <= allRow - 1 : 
-					nextShot = self.getCurrentIndexWidgetItem(nextIndex)[0]
+					nextShot = self.getIndexWidgetItem(nextIndex)[0]
 
 
 				# calculate shot
@@ -286,20 +331,45 @@ class MyForm(QtGui.QMainWindow):
 	def setShotAutoDuration(self) : 
 
 		# if shot in camera sequencer 
+		newStartFrame = int()
 		newEndFrame = int()
-		newEndFrame = int()
+		newDuration = int()
 
 		if self.shotInfo : 
-			# set for last shot
-			allRow = self.ui.listWidget.count()
 
-			# get last shot
-			lastShotInfo = self.getCurrentIndexWidgetItem(allRow - 1)
+			if self.ui.last_radioButton.isChecked() : 
+				# set for last shot
+				allRow = self.ui.listWidget.count()
 
-			endFrame = int(float(lastShotInfo[3]))
+				# get last shot
+				lastShotInfo = self.getIndexWidgetItem(allRow - 1)
 
-			newStartFrame = endFrame + 1
-			newEndFrame = newStartFrame + int(self.defaultDuration) - 1
+				endFrame = int(float(lastShotInfo[3]))
+
+				newStartFrame = endFrame + 1
+				newEndFrame = newStartFrame + int(self.defaultDuration) - 1
+
+
+			if self.ui.after_radioButton.isChecked() :
+				self.ui.start_lineEdit.setEnabled(False)
+
+				# if select one item
+				if self.ui.listWidget.currentItem() : 
+					itemInfo = self.getCurrentWidgetItem()
+					currentEndFrame = float(itemInfo[3])
+					newStartFrame = currentEndFrame + 1
+					newEndFrame = newStartFrame + int(self.defaultDuration) - 1
+
+
+			if self.ui.before_radioButton.isChecked() : 
+				self.ui.start_lineEdit.setEnabled(False)
+
+				if self.ui.listWidget.currentItem() : 
+					itemInfo = self.getCurrentWidgetItem()
+					currentStartFrame = float(itemInfo[1])
+					newStartFrame = currentStartFrame
+					newEndFrame = newStartFrame + int(self.defaultDuration) - 1
+
 
 
 		else : 
@@ -331,9 +401,21 @@ class MyForm(QtGui.QMainWindow):
 	# make camera function
 	def addShot(self) : 
 		shotName = str(self.ui.shotName_lineEdit.text())
-		startTime = int(self.ui.start_lineEdit.text())
-		endTime = int(self.ui.end_lineEdit.text())
+		startTime = float(self.ui.start_lineEdit.text())
+		endTime = float(self.ui.end_lineEdit.text())
+		duration = endTime - startTime + 1
+		pushValue = duration
+		print pushValue
 
+		currentIndex = self.ui.listWidget.currentRow()
+
+		# push sequencer according to insert shot
+		if self.ui.after_radioButton.isChecked() : 
+			self.moveShotCmd(currentIndex + 1, pushValue)
+
+		if self.ui.before_radioButton.isChecked() : 
+			self.moveShotCmd(currentIndex, pushValue)
+		
 		if not self.ui.camera_checkBox.isChecked() : 
 			cam = cameraRig.referenceCamera(self.cameraRigFile, shotName)
 
@@ -344,13 +426,17 @@ class MyForm(QtGui.QMainWindow):
 				try : 
 					cameraRig.linkCameraToShot(shotName, shot)
 
-				except exception as error : 
+				except Exception as error : 
 					print error
 
 			# cameraRig.makeCameraRig(self.cameraRigFile, shotName, startTime, endTime)
 
 		else : 
 			self.createShotFromExistingCamera(shotName, startTime, endTime)
+
+
+		
+
 
 		self.refreshUI()
 
@@ -361,7 +447,7 @@ class MyForm(QtGui.QMainWindow):
 			self.shotEditDurationCmd()
 
 		else : 
-			self.moveShotCmd()
+			self.moveShot()
 
 
 
@@ -454,9 +540,32 @@ class MyForm(QtGui.QMainWindow):
 
 
 
-	def moveShotCmd(self) : 
+	def moveShot(self) : 
 		# selected shot
-		item = self.getCurrentWidgetItem()
+		index = self.ui.listWidget.currentRow()
+		moveFrames = int(str(self.ui.moveShot_lineEdit.text()))
+
+		self.moveShotCmd(index, moveFrames)
+
+
+	def moveShotCmd(self, startIndex, frames) : 
+		# find all items 
+		count = self.ui.listWidget.count()
+		startShot = self.getIndexWidgetItem(startIndex)
+		startFrameShot = startShot[1]
+
+		for i in reversed(range(startIndex, count)) : 
+			itemInfo = self.getIndexWidgetItem(i)
+			shotName = itemInfo[0]
+			startFrame = float(itemInfo[1])
+			endFrame = float(itemInfo[3])
+			setStartFrame = startFrame + frames
+			setEndFrame = endFrame + frames 
+
+			self.editShotTime(shotName, setStartFrame, setEndFrame, True, True)
+
+		shiftFrame.shiftKey('start', [startFrameShot], frames)
+
 
 
 	def extendTailShot(self, currentIndex, extendFrame) : 
@@ -464,7 +573,7 @@ class MyForm(QtGui.QMainWindow):
 		count = self.ui.listWidget.count()
 
 		for i in reversed(range(currentIndex, count)) : 
-			itemInfo = self.getCurrentIndexWidgetItem(i)
+			itemInfo = self.getIndexWidgetItem(i)
 
 			endTime = float(itemInfo[3]) + extendFrame
 			startTime = float(itemInfo[1]) + extendFrame
@@ -482,7 +591,7 @@ class MyForm(QtGui.QMainWindow):
 	def extendTailOverlap(self, currentIndex, extendFrame) : 
 		lastItem = int(self.ui.listWidget.count()) - 1
 
-		itemInfo = self.getCurrentIndexWidgetItem(currentIndex)
+		itemInfo = self.getIndexWidgetItem(currentIndex)
 		shotName = itemInfo[0]
 		startTime = float(itemInfo[1])
 		endTime = float(itemInfo[3])
@@ -490,7 +599,7 @@ class MyForm(QtGui.QMainWindow):
 
 
 		if not currentIndex == lastItem : 
-			nItemInfo = self.getCurrentIndexWidgetItem(currentIndex + 1)
+			nItemInfo = self.getIndexWidgetItem(currentIndex + 1)
 			nShotName = nItemInfo[0]
 			nStartTime = float(nItemInfo[1])
 			nEndTime = float(nItemInfo[3])
@@ -508,17 +617,28 @@ class MyForm(QtGui.QMainWindow):
 
 			# check if extend more than next shot duration			
 			if nnStartTime < nEndTime - 1 : 				
-				self.editShotTime(shotName, startTime, setEndTime, False, True)
 				self.editShotTime(nShotName, nnStartTime, nEndTime, True, False)
+				self.editShotTime(shotName, startTime, setEndTime, False, True)
 
 			else : 
 				setEndTime = nEndTime - 2 
-				self.editShotTime(shotName, startTime, setEndTime, False, True)
 				self.editShotTime(nShotName, nnStartTime, nEndTime, True, False)
+				self.editShotTime(shotName, startTime, setEndTime, False, True)
+
+		else : 
+			self.editShotTime(shotName, startTime, setEndTime, False, True)
 
 
 
 	def extendHeadShot(self, currentIndex, extendFrame) : 
+		# current ================================================
+
+		itemInfo = self.getIndexWidgetItem(currentIndex)
+
+		startTime = float(itemInfo[1]) - extendFrame
+		endTime = float(itemInfo[3])
+		shotName = itemInfo[0]
+
 		if not currentIndex == 0 : 
 			startIndex = currentIndex - 1
 
@@ -527,21 +647,12 @@ class MyForm(QtGui.QMainWindow):
 
 			# previous item 
 
-			itemInfo = self.getCurrentIndexWidgetItem(startIndex)
+			itemInfo = self.getIndexWidgetItem(startIndex)
 
 			pStartTime = float(itemInfo[1])
 			pEndTime = float(itemInfo[3]) - extendFrame
 			pShotName = itemInfo[0]
-
-
-
-			# current ================================================
-
-			itemInfo = self.getCurrentIndexWidgetItem(currentIndex)
-
-			startTime = float(itemInfo[1]) - extendFrame
-			endTime = float(itemInfo[3])
-			shotName = itemInfo[0]
+			
 
 			# check if extend range overlapping prevShot
 			spaceShot = startTime - pEndTime - 1
@@ -564,12 +675,17 @@ class MyForm(QtGui.QMainWindow):
 					self.editShotTime(shotName, pStartTime+2, endTime)
 
 
+		else : 
+			self.editShotTime(shotName, startTime, endTime)
+
+
+
 
 
 
 	def trimShot(self, currentIndex, trimFrame, setStart, setEnd) : 
 
-		shotName = self.getCurrentIndexWidgetItem(currentIndex)[0]
+		shotName = self.getIndexWidgetItem(currentIndex)[0]
 		start = 0
 		end = 0
 
@@ -587,14 +703,16 @@ class MyForm(QtGui.QMainWindow):
 		ctrl = '%s_camera_ctrl' % shotName
 
 		if setStart : 
-			mc.setAttr('%s.startFrame' % shotName, start)
 			mc.setAttr('%s.sequenceStartFrame' % shotName, start)
-			# mc.setAttr('%s.CutIn' % ctrl, start)
+			mc.setAttr('%s.startFrame' % shotName, start)
+
+			self.printLog('%s set startFrame %s' % (shotName, start)) 
 
 		if setEnd : 
-			mc.setAttr('%s.endFrame' % shotName, end)
 			mc.setAttr('%s.sequenceEndFrame' % shotName, end)
-			# mc.setAttr('%s.CutOut' % ctrl, end)
+			mc.setAttr('%s.endFrame' % shotName, end)
+
+			self.printLog('%s sest endFrame %s' % (shotName, end))
 
 
 	def rebuildSequencer(self) : 
@@ -602,7 +720,8 @@ class MyForm(QtGui.QMainWindow):
 		shots = mc.ls(type = 'shot')
 
 		for eachShot in shots : 
-			print 'Reading %s ...' % eachShot
+			self.printLog('Reading %s ...' % eachShot)
+
 			startTime = mc.shot(eachShot, q = True, st = True)
 			endTime = mc.shot(eachShot, q = True, et = True)
 			sequenceStartTime = mc.shot(eachShot, q = True, sst = True)
@@ -610,16 +729,17 @@ class MyForm(QtGui.QMainWindow):
 			currentCamera = mc.shot(eachShot, q = True, cc = True)
 
 			mc.delete(eachShot)
-			print 'Delete %s' % eachShot
+
+			self.printLog('Delete %s' % eachShot)
 
 			cameraRig.makeSequencerShot(eachShot, currentCamera, startTime, endTime)
-			print 'Create %s' % eachShot
+			self.printLog('Create %s' % eachShot)
 			
 			try : 
 				cameraRig.linkCameraToShot(eachShot, eachShot)
-				print 'Linked camera rig to shot %s' % eachShot
+				self.printLog('Linked camera rig to shot %s' % eachShot)
 
-			except exception as error : 
+			except Exception as error : 
 				print error
 
 
@@ -636,7 +756,7 @@ class MyForm(QtGui.QMainWindow):
 			cameraRig.linkCameraToShot(shotName, shot)
 			pass
 
-		except exception as error : 
+		except Exception as error : 
 			print error
 
 
@@ -668,7 +788,7 @@ class MyForm(QtGui.QMainWindow):
 		return itemInfo
 
 
-	def getCurrentIndexWidgetItem(self, index) : 
+	def getIndexWidgetItem(self, index) : 
 		item = self.ui.listWidget.item(index)
 		customWidget = self.ui.listWidget.itemWidget(item)
 		itemInfo = customWidget.texts()
@@ -726,6 +846,11 @@ class MyForm(QtGui.QMainWindow):
 		myDialog.ui.b3_pushButton.setText(label3)
 		myDialog.exec_()
 		return myDialog.value
+
+
+	def printLog(self, message, echo = True) : 
+		if echo : 
+			print message
 
 		
 class MyDialog(QtGui.QDialog, MyForm):
