@@ -7,7 +7,7 @@ class customQWidgetItem(QtGui.QWidget) :
 	def __init__(self, parent = None) : 
 		super(customQWidgetItem, self).__init__(parent)
 		# set label 
-		self.textQVBoxLayout = QtGui.QVBoxLayout()
+		self.textQHBoxLayout = QtGui.QHBoxLayout()
 		self.text1Label = QtGui.QLabel()
 		self.text2Label = QtGui.QLabel()
 		self.text3Label = QtGui.QLabel()
@@ -15,11 +15,15 @@ class customQWidgetItem(QtGui.QWidget) :
 		self.text5Label = QtGui.QLabel()
 		self.text6Label = QtGui.QLabel()
 		self.text7Label = QtGui.QLabel()
+		self.text8Label = QtGui.QLabel()
+		self.text9Label = QtGui.QLabel()
 
 		self.text1QHBoxLayout = QtGui.QHBoxLayout()
 		self.text2QHBoxLayout = QtGui.QHBoxLayout()
 
-		self.textQVBoxLayout.addWidget(self.text1Label)
+		self.textQHBoxLayout.addWidget(self.text8Label)
+		self.textQHBoxLayout.addWidget(self.text1Label)
+		self.textQHBoxLayout.addWidget(self.text9Label)
 
 		self.text1QHBoxLayout.addWidget(self.text2Label)
 		self.text1QHBoxLayout.addWidget(self.text3Label)
@@ -29,8 +33,7 @@ class customQWidgetItem(QtGui.QWidget) :
 		self.text2QHBoxLayout.addWidget(self.text6Label)
 		self.text2QHBoxLayout.addWidget(self.text7Label)
 
-		self.textQVBoxLayout.addLayout(self.text1QHBoxLayout, 1)
-		self.textQVBoxLayout.addLayout(self.text2QHBoxLayout, 2)
+		
 
 		# alignment
 		self.text1Label.setAlignment(QtCore.Qt.AlignCenter)
@@ -40,13 +43,18 @@ class customQWidgetItem(QtGui.QWidget) :
 		self.text5Label.setAlignment(QtCore.Qt.AlignLeft)
 		self.text6Label.setAlignment(QtCore.Qt.AlignCenter)
 		self.text7Label.setAlignment(QtCore.Qt.AlignRight)
+		self.text8Label.setAlignment(QtCore.Qt.AlignLeft)
+		self.text9Label.setAlignment(QtCore.Qt.AlignRight)
 
 
 		# set icon
-		self.allLayout = QtGui.QHBoxLayout()
+		self.allLayout = QtGui.QVBoxLayout()
 		# self.iconQLabel = QtGui.QLabel()
 		# self.allLayout.addWidget(self.iconQLabel, 0)
-		self.allLayout.addLayout(self.textQVBoxLayout, 0)
+		self.allLayout.addLayout(self.textQHBoxLayout, 0)
+		self.allLayout.addLayout(self.text1QHBoxLayout, 1)
+		self.allLayout.addLayout(self.text2QHBoxLayout, 2)
+
 		self.allLayout.setContentsMargins(2, 2, 2, 2)
 		self.setLayout(self.allLayout)
 
@@ -61,6 +69,9 @@ class customQWidgetItem(QtGui.QWidget) :
 		self.text3Label.setFont(font)
 		self.text6Label.setFont(font)
 
+		self.text8Label.setFont(font)
+		self.text9Label.setFont(font)
+
 
 	def setTexts(self, texts) : 
 		self.text1Label.setText(texts[0])
@@ -70,6 +81,8 @@ class customQWidgetItem(QtGui.QWidget) :
 		self.text5Label.setText(texts[4])
 		self.text6Label.setText(texts[5])
 		self.text7Label.setText(texts[6])
+		self.text8Label.setText(texts[7])
+		self.text9Label.setText(texts[8])
 
 
 
@@ -81,6 +94,8 @@ class customQWidgetItem(QtGui.QWidget) :
 		self.text5Label.setStyleSheet('color: rgb(%s, %s, %s);' % (colors[4][0], colors[4][1], colors[4][2]))
 		self.text6Label.setStyleSheet('color: rgb(%s, %s, %s);' % (colors[5][0], colors[5][1], colors[5][2]))
 		self.text7Label.setStyleSheet('color: rgb(%s, %s, %s);' % (colors[6][0], colors[6][1], colors[6][2]))
+		self.text8Label.setStyleSheet('color: rgb(%s, %s, %s);' % (colors[7][0], colors[7][1], colors[7][2]))
+		self.text9Label.setStyleSheet('color: rgb(%s, %s, %s);' % (colors[8][0], colors[8][1], colors[8][2]))
 
 
 	# def setIcon(self, iconPath, size) : 
@@ -96,5 +111,7 @@ class customQWidgetItem(QtGui.QWidget) :
 		texts.append(self.text5Label.text())
 		texts.append(self.text6Label.text())
 		texts.append(self.text7Label.text())
+		texts.append(self.text8Label.text())
+		texts.append(self.text9Label.text())
 
 		return texts

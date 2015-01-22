@@ -86,7 +86,7 @@ class MyForm(QtGui.QMainWindow):
 
 	def initConnections(self) : 
 		self.ui.refresh_pushButton.clicked.connect(self.refreshUI)
-		self.ui.listWidget.itemSelectionChanged.connect(self.setEditField)
+		self.ui.listWidget.itemSelectionChanged.connect(self.itemSelectCommand)
 		self.ui.addShot_pushButton.clicked.connect(self.addShot)
 		self.ui.before_radioButton.toggled.connect(self.setAutoInfo)
 		self.ui.after_radioButton.toggled.connect(self.setAutoInfo)
@@ -99,6 +99,8 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.start_lineEdit.returnPressed.connect(self.setAutoStartTime)
 		self.ui.end_lineEdit.returnPressed.connect(self.setAutoEndTime)
 		self.ui.duration_lineEdit.returnPressed.connect(self.setAutoDuration)
+		self.ui.shiftFrame_pushButton.clicked.connect(self.shiftKeyFrame)
+		self.ui.disableShot_pushButton.clicked.connect(self.toggledShot)
 
 
 	def refreshUI(self) : 
@@ -131,12 +133,14 @@ class MyForm(QtGui.QMainWindow):
 			duration = mc.shot(eachShot, q = True, sourceDuration = True)
 			sequenceStartTime = mc.shot(eachShot, q = True, sequenceStartTime = True)
 			sequenceEndTime = mc.shot(eachShot, q = True, sequenceEndTime = True)
+			status = mc.shot(eachShot, q = True, mute = True)
 
 			shotInfo[eachShot] = {	'startTime': startTime, 
 									'endTime': endTime, 
 									'duration': duration, 
 									'sequenceStartTime': sequenceStartTime, 
-									'sequenceEndTime': sequenceEndTime
+									'sequenceEndTime': sequenceEndTime, 
+									'mute': status
 
 									}
 
@@ -157,6 +161,7 @@ class MyForm(QtGui.QMainWindow):
 				duration = self.shotInfo[eachShot]['duration']
 				sequenceStartTime = self.shotInfo[eachShot]['sequenceStartTime']
 				sequenceEndTime = self.shotInfo[eachShot]['sequenceEndTime']
+				mute = self.shotInfo[eachShot]['mute']
 
 				text1 = str(shotName)
 				text2 = str(startTime)
@@ -165,16 +170,42 @@ class MyForm(QtGui.QMainWindow):
 				text5 = 'startTime'
 				text6 = 'duration'
 				text7 = 'endTime'
+				text8 = ''
+				text9 = ''
 
-				texts = [text1, text2, text3, text4, text5, text6, text7]
 
 				color = [20, 20, 20]
 				text1Color = [255, 255, 0]
 				text2Color = [100, 180, 255]
 				text3Color = [0, 200, 0]
-				textColors = [text1Color, text2Color, text2Color, text2Color, text3Color, text3Color, text3Color]
+				text4Color = [200, 0, 0]
+
+				# check if disabled
+				if mute : 
+					color = [100, 20, 20]
+					text9 = 'Disabled'
+
+
+				# check if start and end frame is valid
+				if startTime > endTime : 
+					color = [100, 20, 20]
+					text8 = 'Start/End frame'
+
+				# check if shot stretch
+				if not startTime == sequenceStartTime or not endTime == sequenceEndTime : 
+					color = [100, 20, 20]
+					text8 = 'Shot stretch'
+				
+				texts = [text1, text2, text3, text4, text5, text6, text7, text8, text9]
+				textColors = [text1Color, text2Color, text2Color, text2Color, text3Color, text3Color, text3Color, text4Color, text4Color]
 
 				self.addCustomListWidgetItem(texts, color, textColors, self.defaultIcon, 40)
+
+
+	def itemSelectCommand(self) : 
+		self.setEditField()
+		self.setToggledMuteButton()
+
 
 
 	def setEditField(self) : 
@@ -198,6 +229,22 @@ class MyForm(QtGui.QMainWindow):
 			else : 
 				self.ui.editStart_lineEdit.clear()
 				self.ui.editEnd_lineEdit.clear()
+
+
+
+	def setToggledMuteButton(self) : 
+		itemInfo = self.getCurrentWidgetItem()
+
+		if itemInfo : 
+			shotName = itemInfo[0]
+
+			status = mc.shot(shotName, q = True, mute = True)
+
+			if status : 
+				self.ui.disableShot_pushButton.setText('Enable Selected Shot')
+
+			else : 
+				self.ui.disableShot_pushButton.setText('Disable Selected Shot')
 
 
 
@@ -356,7 +403,7 @@ class MyForm(QtGui.QMainWindow):
 				# if select one item
 				if self.ui.listWidget.currentItem() : 
 					itemInfo = self.getCurrentWidgetItem()
-					currentEndFrame = float(itemInfo[3])
+					currentEndFrame = int(float(itemInfo[3]))
 					newStartFrame = currentEndFrame + 1
 					newEndFrame = newStartFrame + int(self.defaultDuration) - 1
 
@@ -366,7 +413,7 @@ class MyForm(QtGui.QMainWindow):
 
 				if self.ui.listWidget.currentItem() : 
 					itemInfo = self.getCurrentWidgetItem()
-					currentStartFrame = float(itemInfo[1])
+					currentStartFrame = int(float(itemInfo[1]))
 					newStartFrame = currentStartFrame
 					newEndFrame = newStartFrame + int(self.defaultDuration) - 1
 
@@ -405,7 +452,6 @@ class MyForm(QtGui.QMainWindow):
 		endTime = float(self.ui.end_lineEdit.text())
 		duration = endTime - startTime + 1
 		pushValue = duration
-		print pushValue
 
 		currentIndex = self.ui.listWidget.currentRow()
 
@@ -477,9 +523,9 @@ class MyForm(QtGui.QMainWindow):
 			if inputEndTime > currentEndTime : 
 				extendFrame = inputEndTime - currentEndTime
 
-				message2 = 'Extend for %s frames.' % extendFrame
-				choice1 = 'Extend and push away next shot'
-				choice2 = 'Extend to overlap next shot'
+				message2 = 'Extend %s frames. Please select extend options.' % extendFrame
+				choice1 = 'Extend + Move key'
+				choice2 = 'Extend'
 				choice3 = 'Cancel'
 
 				result = self.customMessageBox('Information', message2, choice1, choice2, choice3)
@@ -507,8 +553,11 @@ class MyForm(QtGui.QMainWindow):
 			if inputEndTime < currentEndTime : 
 				trimFrame = inputEndTime
 
-				self.trimShot(itemIndex, trimFrame, False, True)
-				message = 'Trim successful'
+				result = self.messageBox('Confirm', 'Trim End Frame to %s?' % trimFrame)
+
+				if result == QtGui.QMessageBox.Ok : 
+					self.trimShot(itemIndex, trimFrame, False, True)
+					message = 'Trim successful'
 
 
 			''' condition 3 trim head
@@ -519,8 +568,11 @@ class MyForm(QtGui.QMainWindow):
 			if inputStartTime > currentStartTime : 
 				trimFrame = inputStartTime
 
-				self.trimShot(itemIndex, trimFrame, True, False)
-				message = 'Trim successful'
+				result = self.messageBox('Confirm', 'Trim Start Frame to %s?' % trimFrame)
+
+				if result == QtGui.QMessageBox.Ok : 
+					self.trimShot(itemIndex, trimFrame, True, False, False)
+					message = 'Trim successful'
 
 
 			''' condition 4 extend head
@@ -530,13 +582,30 @@ class MyForm(QtGui.QMainWindow):
 			'''
 			if inputStartTime < currentStartTime : 
 				extendFrame = currentStartTime - inputStartTime
-				self.extendHeadShot(itemIndex, extendFrame)
-				message = 'Extend successful'
+
+				result = self.messageBox('Confirm', 'Extend Start Frame to %s?' % inputStartTime)
+
+				if result == QtGui.QMessageBox.Ok : 
+					self.extendHeadShot(itemIndex, extendFrame)
+					message = 'Extend successful'
 
 			self.refreshUI()
 
-			if not cancel : 
-				self.completeDialog('Success', message)
+			# if not cancel : 
+			# 	self.completeDialog('Success', message)
+
+
+
+	def toggledShot(self) : 
+		itemInfo = self.getCurrentWidgetItem()
+
+		if itemInfo : 
+			shotName = itemInfo[0]
+
+			status = mc.shot(shotName, q = True, mute = True)
+			mc.shot(shotName, e = True, mute = (not status))
+
+			self.refreshUI()
 
 
 
@@ -550,21 +619,33 @@ class MyForm(QtGui.QMainWindow):
 
 	def moveShotCmd(self, startIndex, frames) : 
 		# find all items 
-		count = self.ui.listWidget.count()
-		startShot = self.getIndexWidgetItem(startIndex)
-		startFrameShot = startShot[1]
 
-		for i in reversed(range(startIndex, count)) : 
-			itemInfo = self.getIndexWidgetItem(i)
-			shotName = itemInfo[0]
-			startFrame = float(itemInfo[1])
-			endFrame = float(itemInfo[3])
-			setStartFrame = startFrame + frames
-			setEndFrame = endFrame + frames 
+		if not frames == 0 : 
 
-			self.editShotTime(shotName, setStartFrame, setEndFrame, True, True)
+			count = self.ui.listWidget.count()
+			startShot = self.getIndexWidgetItem(startIndex)
+			startFrameShot = startShot[1]
 
-		shiftFrame.shiftKey('start', [startFrameShot], frames)
+			if frames > 0 : 
+				countIndex = reversed(range(startIndex, count))
+			
+			if frames < 0 : 
+				countIndex = range(startIndex, count)
+
+			
+			for i in countIndex : 
+				itemInfo = self.getIndexWidgetItem(i)
+				shotName = itemInfo[0]
+				startFrame = float(itemInfo[1])
+				endFrame = float(itemInfo[3])
+				setStartFrame = startFrame + frames
+				setEndFrame = endFrame + frames 
+
+				self.editShotTime(shotName, setStartFrame, setEndFrame, True, True)
+
+			shiftFrame.shiftKey('start', [startFrameShot], frames)
+
+			self.refreshUI()
 
 
 
@@ -617,16 +698,16 @@ class MyForm(QtGui.QMainWindow):
 
 			# check if extend more than next shot duration			
 			if nnStartTime < nEndTime - 1 : 				
-				self.editShotTime(nShotName, nnStartTime, nEndTime, True, False)
-				self.editShotTime(shotName, startTime, setEndTime, False, True)
+				self.editShotTime(nShotName, nnStartTime, nEndTime, True, False, False)
+				self.editShotTime(shotName, startTime, setEndTime, False, True, False)
 
 			else : 
 				setEndTime = nEndTime - 2 
-				self.editShotTime(nShotName, nnStartTime, nEndTime, True, False)
-				self.editShotTime(shotName, startTime, setEndTime, False, True)
+				self.editShotTime(nShotName, nnStartTime, nEndTime, True, False, False)
+				self.editShotTime(shotName, startTime, setEndTime, False, True, False)
 
 		else : 
-			self.editShotTime(shotName, startTime, setEndTime, False, True)
+			self.editShotTime(shotName, startTime, setEndTime, False, True, False)
 
 
 
@@ -683,7 +764,7 @@ class MyForm(QtGui.QMainWindow):
 
 
 
-	def trimShot(self, currentIndex, trimFrame, setStart, setEnd) : 
+	def trimShot(self, currentIndex, trimFrame, setStart, setEnd, sequencePriority = True) : 
 
 		shotName = self.getIndexWidgetItem(currentIndex)[0]
 		start = 0
@@ -695,22 +776,32 @@ class MyForm(QtGui.QMainWindow):
 		if setEnd : 
 			end = trimFrame
 
-		self.editShotTime(shotName, start, end, setStart, setEnd)
+		self.editShotTime(shotName, start, end, setStart, setEnd, sequencePriority)
 
 
-	def editShotTime(self, shotName, start, end, setStart = True, setEnd = True) : 
+	def editShotTime(self, shotName, start, end, setStart = True, setEnd = True, sequencePriority = True) : 
 
 		ctrl = '%s_camera_ctrl' % shotName
 
 		if setStart : 
-			mc.setAttr('%s.sequenceStartFrame' % shotName, start)
-			mc.setAttr('%s.startFrame' % shotName, start)
+			if sequencePriority : 
+				mc.setAttr('%s.sequenceStartFrame' % shotName, start)
+				mc.setAttr('%s.startFrame' % shotName, start)
+
+			else : 
+				mc.setAttr('%s.startFrame' % shotName, start)
+				mc.setAttr('%s.sequenceStartFrame' % shotName, start)
 
 			self.printLog('%s set startFrame %s' % (shotName, start)) 
 
 		if setEnd : 
-			mc.setAttr('%s.sequenceEndFrame' % shotName, end)
-			mc.setAttr('%s.endFrame' % shotName, end)
+			if sequencePriority : 
+				mc.setAttr('%s.sequenceEndFrame' % shotName, end)
+				mc.setAttr('%s.endFrame' % shotName, end)
+
+			else : 
+				mc.setAttr('%s.endFrame' % shotName, end)
+				mc.setAttr('%s.sequenceEndFrame' % shotName, end)
 
 			self.printLog('%s sest endFrame %s' % (shotName, end))
 
@@ -744,6 +835,19 @@ class MyForm(QtGui.QMainWindow):
 
 
 		self.completeDialog('Complete', 'Rebuilt shot complete. See script editor for details')
+
+
+
+	def shiftKeyFrame(self) : 
+		frames = int(self.ui.frame_lineEdit.text())
+		currentFrame = mc.currentTime(q = True)
+
+		if not frames == 0 : 
+			if not self.ui.currentStart_checkBox.isChecked() : 
+				shiftFrame.shiftKey('default', [1, 10000], frames)
+
+			else : 
+				shiftFrame.shiftKey('start', [currentFrame], frames)
 
 
 
@@ -782,10 +886,12 @@ class MyForm(QtGui.QMainWindow):
 
 	def getCurrentWidgetItem(self) : 
 		item = self.ui.listWidget.currentItem()
-		customWidget = self.ui.listWidget.itemWidget(item)
-		itemInfo = customWidget.texts()
 
-		return itemInfo
+		if item : 
+			customWidget = self.ui.listWidget.itemWidget(item)
+			itemInfo = customWidget.texts()
+
+			return itemInfo
 
 
 	def getIndexWidgetItem(self, index) : 

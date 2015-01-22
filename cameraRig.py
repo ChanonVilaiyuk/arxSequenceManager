@@ -35,22 +35,34 @@ def linkCameraToShot(camera, shotName) :
 	# mc.connectAttr('%s.CutOut' % ctrl, '%s.endFrame' % shotName, f = True)
 	# mc.connectAttr('%s.CutIn' % ctrl, '%s.sequenceStartFrame' % shotName, f = True)
 
-	mc.connectAttr('%s.startFrame' % shotName, '%s.CutIn' % ctrl, f = True)
-	mc.connectAttr('%s.endFrame' % shotName, '%s.CutOut' % ctrl, f = True)
+	if mc.objExists(ctrl) : 
+		mc.connectAttr('%s.startFrame' % shotName, '%s.CutIn' % ctrl, f = True)
+		mc.connectAttr('%s.endFrame' % shotName, '%s.CutOut' % ctrl, f = True)
 
 
-	# calculate duration
-	pma = mc.createNode('plusMinusAverage', n = 'duration_pma')
-	mc.setAttr('%s.operation' % pma, 2)
+		# calculate duration
+		pmaName = 'duration_pma'
+		if mc.objExists(pmaName) : 
+			mc.delete(pmaName)
 
-	mc.connectAttr('%s.CutOut' % ctrl, '%s.input3D[0].input3Dx' % pma, f = True)
-	mc.connectAttr('%s.CutIn' % ctrl, '%s.input3D[1].input3Dx' % pma, f = True)
-	
-	pma2 = mc.createNode('plusMinusAverage', n = 'durationAdd_pma')
-	mc.connectAttr('%s.output3D.output3Dx' % pma, '%s.input3D[0].input3Dx' % pma2, f = True)
-	mc.setAttr('%s.input3D[1].input3Dx' % pma2, 1)
+		pma = mc.createNode('plusMinusAverage', n = pmaName)
+		mc.setAttr('%s.operation' % pma, 2)
 
-	mc.connectAttr('%s.output3D.output3Dx' % pma2, '%s.Duration' % ctrl, f = True)
+		mc.connectAttr('%s.CutOut' % ctrl, '%s.input3D[0].input3Dx' % pma, f = True)
+		mc.connectAttr('%s.CutIn' % ctrl, '%s.input3D[1].input3Dx' % pma, f = True)
+		
+		pmaName2 = 'durationAdd_pma' 
+		if mc.objExists(pmaName2) : 
+			mc.delete(pmaName2)
+
+		pma2 = mc.createNode('plusMinusAverage', n = pmaName2)
+		mc.connectAttr('%s.output3D.output3Dx' % pma, '%s.input3D[0].input3Dx' % pma2, f = True)
+		mc.setAttr('%s.input3D[1].input3Dx' % pma2, 1)
+
+		mc.connectAttr('%s.output3D.output3Dx' % pma2, '%s.Duration' % ctrl, f = True)
+
+	else : 
+		print 'No camera rig found. CutIn / CutOut not link'
 
 
 def setStartEndTime(shotName, startTime, endTime) : 
