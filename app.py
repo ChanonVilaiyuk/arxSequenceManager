@@ -512,6 +512,8 @@ class MyForm(QtGui.QMainWindow):
 			inputStartTime = int(str(self.ui.editStart_lineEdit.text()))
 			inputEndTime = int(str(self.ui.editEnd_lineEdit.text()))
 
+			count = self.ui.listWidget.count()
+
 			cancel = False
 			message = ''
 
@@ -552,12 +554,18 @@ class MyForm(QtGui.QMainWindow):
 
 			if inputEndTime < currentEndTime : 
 				trimFrame = inputEndTime
+				lastItem = count - 1
+				trimDuration = currentEndTime - inputEndTime
 
 				result = self.messageBox('Confirm', 'Trim End Frame to %s?' % trimFrame)
 
 				if result == QtGui.QMessageBox.Ok : 
-					self.trimShot(itemIndex, trimFrame, False, True)
-					message = 'Trim successful'
+					if self.ui.linkedShot_checkBox.isChecked() and not itemIndex == lastItem : 
+						self.extendHeadShot(itemIndex + 1, trimDuration)
+
+					else : 
+						self.trimShot(itemIndex, trimFrame, False, True)
+						message = 'Trim successful'
 
 
 			''' condition 3 trim head
@@ -567,12 +575,17 @@ class MyForm(QtGui.QMainWindow):
 
 			if inputStartTime > currentStartTime : 
 				trimFrame = inputStartTime
+				trimDuration = inputStartTime - currentStartTime
 
 				result = self.messageBox('Confirm', 'Trim Start Frame to %s?' % trimFrame)
 
 				if result == QtGui.QMessageBox.Ok : 
-					self.trimShot(itemIndex, trimFrame, True, False, False)
-					message = 'Trim successful'
+					if self.ui.linkedShot_checkBox.isChecked() and not itemIndex == 0 : 
+						self.extendTailOverlap(itemIndex - 1, trimDuration)
+
+					else : 
+						self.trimShot(itemIndex, trimFrame, True, False, False)
+						message = 'Trim successful'
 
 
 			''' condition 4 extend head
