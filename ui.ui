@@ -7,8 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>605</width>
-    <height>750</height>
+    <height>770</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>760</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Arx Sequencer Manager</string>
@@ -210,6 +216,43 @@
               <height>30</height>
              </size>
             </property>
+            <property name="palette">
+             <palette>
+              <active>
+               <colorrole role="Button">
+                <brush brushstyle="SolidPattern">
+                 <color alpha="255">
+                  <red>96</red>
+                  <green>120</green>
+                  <blue>172</blue>
+                 </color>
+                </brush>
+               </colorrole>
+              </active>
+              <inactive>
+               <colorrole role="Button">
+                <brush brushstyle="SolidPattern">
+                 <color alpha="255">
+                  <red>96</red>
+                  <green>120</green>
+                  <blue>172</blue>
+                 </color>
+                </brush>
+               </colorrole>
+              </inactive>
+              <disabled>
+               <colorrole role="Button">
+                <brush brushstyle="SolidPattern">
+                 <color alpha="255">
+                  <red>96</red>
+                  <green>120</green>
+                  <blue>172</blue>
+                 </color>
+                </brush>
+               </colorrole>
+              </disabled>
+             </palette>
+            </property>
             <property name="text">
              <string>Apply</string>
             </property>
@@ -311,7 +354,7 @@
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>100</y>
+            <y>180</y>
             <width>131</width>
             <height>16</height>
            </rect>
@@ -326,24 +369,11 @@
            <string>Create Shot Options</string>
           </property>
          </widget>
-         <widget class="QPushButton" name="addShot_pushButton">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>365</y>
-            <width>251</width>
-            <height>31</height>
-           </rect>
-          </property>
-          <property name="text">
-           <string>Add Shot</string>
-          </property>
-         </widget>
          <widget class="QFrame" name="frame_5">
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>0</y>
+            <y>80</y>
             <width>251</width>
             <height>91</height>
            </rect>
@@ -441,9 +471,9 @@
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>120</y>
+            <y>200</y>
             <width>251</width>
-            <height>241</height>
+            <height>201</height>
            </rect>
           </property>
           <property name="frameShape">
@@ -584,26 +614,20 @@
              </property>
             </widget>
            </item>
+           <item>
+            <widget class="QCheckBox" name="noMove_checkBox">
+             <property name="text">
+              <string>Don't move existing shot (ignore overlap)</string>
+             </property>
+            </widget>
+           </item>
           </layout>
-         </widget>
-         <widget class="QPushButton" name="disableShot_pushButton">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>400</y>
-            <width>251</width>
-            <height>31</height>
-           </rect>
-          </property>
-          <property name="text">
-           <string>Disable Selected Shot</string>
-          </property>
          </widget>
          <widget class="QLabel" name="label_17">
           <property name="geometry">
            <rect>
             <x>10</x>
-            <y>490</y>
+            <y>520</y>
             <width>131</width>
             <height>16</height>
            </rect>
@@ -622,7 +646,7 @@
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>510</y>
+            <y>540</y>
             <width>251</width>
             <height>181</height>
            </rect>
@@ -634,6 +658,9 @@
            <enum>QFrame::Sunken</enum>
           </property>
           <layout class="QGridLayout" name="gridLayout_3" columnstretch="0">
+           <property name="verticalSpacing">
+            <number>9</number>
+           </property>
            <item row="0" column="0">
             <widget class="QPushButton" name="rebuildShot_pushButton">
              <property name="minimumSize">
@@ -709,12 +736,244 @@
                   <height>30</height>
                  </size>
                 </property>
+                <property name="palette">
+                 <palette>
+                  <active>
+                   <colorrole role="Button">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>222</red>
+                      <green>223</green>
+                      <blue>118</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="Text">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>42</red>
+                      <green>42</green>
+                      <blue>42</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="ButtonText">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>26</red>
+                      <green>26</green>
+                      <blue>26</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                  </active>
+                  <inactive>
+                   <colorrole role="Button">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>222</red>
+                      <green>223</green>
+                      <blue>118</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="Text">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>42</red>
+                      <green>42</green>
+                      <blue>42</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="ButtonText">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>26</red>
+                      <green>26</green>
+                      <blue>26</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                  </inactive>
+                  <disabled>
+                   <colorrole role="Button">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>222</red>
+                      <green>223</green>
+                      <blue>118</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="Text">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>120</red>
+                      <green>120</green>
+                      <blue>120</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="ButtonText">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="255">
+                      <red>120</red>
+                      <green>120</green>
+                      <blue>120</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
+                  </disabled>
+                 </palette>
+                </property>
                 <property name="text">
                  <string>Shift Frame</string>
                 </property>
                </widget>
               </item>
              </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QLabel" name="logo_label">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>10</y>
+            <width>221</width>
+            <height>61</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+         <widget class="QWidget" name="verticalLayoutWidget">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>410</y>
+            <width>251</width>
+            <height>101</height>
+           </rect>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_9">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="addShot_pushButton">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>30</height>
+              </size>
+             </property>
+             <property name="palette">
+              <palette>
+               <active>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>94</red>
+                   <green>149</green>
+                   <blue>70</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </active>
+               <inactive>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>94</red>
+                   <green>149</green>
+                   <blue>70</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </inactive>
+               <disabled>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>94</red>
+                   <green>149</green>
+                   <blue>70</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </disabled>
+              </palette>
+             </property>
+             <property name="text">
+              <string>Add Shot</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="disableShot_pushButton">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>30</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Disable Selected Shot</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="deleteShot_pushButton">
+             <property name="palette">
+              <palette>
+               <active>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>144</red>
+                   <green>62</green>
+                   <blue>62</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </active>
+               <inactive>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>144</red>
+                   <green>62</green>
+                   <blue>62</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </inactive>
+               <disabled>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>144</red>
+                   <green>62</green>
+                   <blue>62</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </disabled>
+              </palette>
+             </property>
+             <property name="text">
+              <string>Delete Shot</string>
+             </property>
             </widget>
            </item>
           </layout>

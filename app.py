@@ -101,6 +101,9 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.duration_lineEdit.returnPressed.connect(self.setAutoDuration)
 		self.ui.shiftFrame_pushButton.clicked.connect(self.shiftKeyFrame)
 		self.ui.disableShot_pushButton.clicked.connect(self.toggledShot)
+		self.ui.deleteShot_pushButton.clicked.connect(self.deleteShot)
+		self.ui.auto_checkBox.stateChanged.connect(self.setAutoShotName)
+		self.ui.noMove_checkBox.stateChanged.connect(self.setShotAutoDuration)
 
 
 	def refreshUI(self) : 
@@ -118,6 +121,14 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.editStart_lineEdit.setEnabled(not self.ui.moveShot_checkBox.isChecked())
 		self.ui.editEnd_lineEdit.setEnabled(not self.ui.moveShot_checkBox.isChecked())
 		self.ui.moveShot_lineEdit.setText('0')
+		self.setLogo()
+
+
+	def setLogo(self) : 
+		# set company logo
+		logo = self.configData['logo']
+		iconPath = '%s/%s' % (self.iconPath, logo)
+		self.ui.logo_label.setPixmap(QtGui.QPixmap(iconPath).scaled(200, 40, QtCore.Qt.KeepAspectRatio))
 
 
 
@@ -162,6 +173,7 @@ class MyForm(QtGui.QMainWindow):
 				sequenceStartTime = self.shotInfo[eachShot]['sequenceStartTime']
 				sequenceEndTime = self.shotInfo[eachShot]['sequenceEndTime']
 				mute = self.shotInfo[eachShot]['mute']
+				errorText = []
 
 				text1 = str(shotName)
 				text2 = str(startTime)
@@ -189,12 +201,28 @@ class MyForm(QtGui.QMainWindow):
 				# check if start and end frame is valid
 				if startTime > endTime : 
 					color = [100, 20, 20]
-					text8 = 'Start/End frame'
+					errorText.append('Start/End frame')
 
 				# check if shot stretch
 				if not startTime == sequenceStartTime or not endTime == sequenceEndTime : 
 					color = [100, 20, 20]
-					text8 = 'Shot stretch'
+					errorText.append('Shot stretch')
+
+				if duration <= 1 : 
+					color = [100, 20, 20]
+					errorText.append('Duration error ')
+
+				if len(errorText) == 1 : 
+					text8 = errorText[0]
+
+				elif len(errorText) > 1 : 
+					text8 = '%s errors' % len(errorText)
+
+				print shotName
+
+				for eachError in errorText : 
+					self.printLog('Error %s' % eachError)
+
 				
 				texts = [text1, text2, text3, text4, text5, text6, text7, text8, text9]
 				textColors = [text1Color, text2Color, text2Color, text2Color, text3Color, text3Color, text3Color, text4Color, text4Color]
@@ -205,6 +233,7 @@ class MyForm(QtGui.QMainWindow):
 	def itemSelectCommand(self) : 
 		self.setEditField()
 		self.setToggledMuteButton()
+		self.setActiveCamera()
 
 
 
@@ -245,6 +274,18 @@ class MyForm(QtGui.QMainWindow):
 
 			else : 
 				self.ui.disableShot_pushButton.setText('Disable Selected Shot')
+
+
+
+	def setActiveCamera(self) : 
+		itemInfo = self.getCurrentWidgetItem()
+
+		if itemInfo : 
+			shotName = itemInfo[0]
+			startTime = itemInfo[1]
+
+			if self.ui.activeShot_checkBox.isChecked() : 
+				mc.sequenceManager(ct = startTime)
 
 
 
@@ -289,6 +330,8 @@ class MyForm(QtGui.QMainWindow):
 
 	def setAutoShotName(self) : 
 		# 1 item is selected
+
+		self.ui.shotName_lineEdit.setEnabled(not self.ui.auto_checkBox.isChecked())
 
 		if self.ui.auto_checkBox.isChecked() : 
 			currentShot = None
@@ -398,7 +441,11 @@ class MyForm(QtGui.QMainWindow):
 
 
 			if self.ui.after_radioButton.isChecked() :
-				self.ui.start_lineEdit.setEnabled(False)
+				if not self.ui.noMove_checkBox.isChecked() : 
+					self.ui.start_lineEdit.setEnabled(False)
+
+				else : 
+					self.ui.start_lineEdit.setEnabled(True)
 
 				# if select one item
 				if self.ui.listWidget.currentItem() : 
@@ -409,7 +456,12 @@ class MyForm(QtGui.QMainWindow):
 
 
 			if self.ui.before_radioButton.isChecked() : 
-				self.ui.start_lineEdit.setEnabled(False)
+				if not self.ui.noMove_checkBox.isChecked() : 
+					self.ui.start_lineEdit.setEnabled(False)
+
+				else : 
+					self.ui.start_lineEdit.setEnabled(True)
+
 
 				if self.ui.listWidget.currentItem() : 
 					itemInfo = self.getCurrentWidgetItem()
@@ -456,11 +508,12 @@ class MyForm(QtGui.QMainWindow):
 		currentIndex = self.ui.listWidget.currentRow()
 
 		# push sequencer according to insert shot
-		if self.ui.after_radioButton.isChecked() : 
-			self.moveShotCmd(currentIndex + 1, pushValue)
+		if not self.ui.noMove_checkBox.isChecked() : 
+			if self.ui.after_radioButton.isChecked() : 
+				self.moveShotCmd(currentIndex + 1, pushValue)
 
-		if self.ui.before_radioButton.isChecked() : 
-			self.moveShotCmd(currentIndex, pushValue)
+			if self.ui.before_radioButton.isChecked() : 
+				self.moveShotCmd(currentIndex, pushValue)
 		
 		if not self.ui.camera_checkBox.isChecked() : 
 			cam = cameraRig.referenceCamera(self.cameraRigFile, shotName)
@@ -480,8 +533,6 @@ class MyForm(QtGui.QMainWindow):
 		else : 
 			self.createShotFromExistingCamera(shotName, startTime, endTime)
 
-
-		
 
 
 		self.refreshUI()
@@ -617,6 +668,19 @@ class MyForm(QtGui.QMainWindow):
 
 			status = mc.shot(shotName, q = True, mute = True)
 			mc.shot(shotName, e = True, mute = (not status))
+
+			self.refreshUI()
+
+
+	def deleteShot(self) : 
+		itemInfo = self.getCurrentWidgetItem()
+
+		if itemInfo : 
+			shotName = itemInfo[0]
+
+			if mc.objExists(shotName) : 
+				mc.delete(shotName)
+
 
 			self.refreshUI()
 
