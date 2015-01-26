@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'U:/extensions/studioTools/python/arxSequencerManager/ui.ui'
 #
-# Created: Sat Jan 24 18:29:24 2015
+# Created: Sun Jan 25 10:41:20 2015
 #      by: pyside-uic 0.2.14 running on PySide 1.2.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -225,6 +225,10 @@ class Ui_SequencerManagerWindow(object):
         self.label_5.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.label_5.setObjectName("label_5")
         self.horizontalLayout_5.addWidget(self.label_5)
+        self.prefix_lineEdit = QtGui.QLineEdit(self.frame_4)
+        self.prefix_lineEdit.setText("")
+        self.prefix_lineEdit.setObjectName("prefix_lineEdit")
+        self.horizontalLayout_5.addWidget(self.prefix_lineEdit)
         self.shotName_lineEdit = QtGui.QLineEdit(self.frame_4)
         self.shotName_lineEdit.setText("")
         self.shotName_lineEdit.setObjectName("shotName_lineEdit")
@@ -460,7 +464,7 @@ class Ui_SequencerManagerWindow(object):
         self.label_4.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Duration", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Camera", None, QtGui.QApplication.UnicodeUTF8))
         self.camera_checkBox.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Use existing camera", None, QtGui.QApplication.UnicodeUTF8))
-        self.noMove_checkBox.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Don\'t move existing shot (ignore overlap)", None, QtGui.QApplication.UnicodeUTF8))
+        self.noMove_checkBox.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Add shot in gap / no move other shots", None, QtGui.QApplication.UnicodeUTF8))
         self.label_17.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Tools", None, QtGui.QApplication.UnicodeUTF8))
         self.rebuildShot_pushButton.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Rebuild Shots", None, QtGui.QApplication.UnicodeUTF8))
         self.label_23.setText(QtGui.QApplication.translate("SequencerManagerWindow", "Shift Frame", None, QtGui.QApplication.UnicodeUTF8))

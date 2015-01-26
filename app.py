@@ -71,6 +71,8 @@ class MyForm(QtGui.QMainWindow):
 		self.defaultIcon = '%s/%s' % (self.iconPath, self.configData['defaultIcon'])
 		self.defaultDuration = self.configData['defaultDuration']
 		self.defaultStartFrame = self.configData['defaultStartFrame']
+		self.shotPrefix = self.configData['shotPrefix']
+		self.shotPadding = self.configData['shotPadding']
 
 		self.cameraRigFile = self.configData['cameraRigFile']
 		self.echo = True
@@ -96,9 +98,9 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.rebuildShot_pushButton.clicked.connect(self.rebuildSequencer)
 		self.ui.camera_checkBox.stateChanged.connect(self.setUI)
 		self.ui.moveShot_checkBox.stateChanged.connect(self.setUI)
-		self.ui.start_lineEdit.returnPressed.connect(self.setAutoStartTime)
-		self.ui.end_lineEdit.returnPressed.connect(self.setAutoEndTime)
-		self.ui.duration_lineEdit.returnPressed.connect(self.setAutoDuration)
+		self.ui.start_lineEdit.editingFinished.connect(self.setAutoStartTime)
+		self.ui.end_lineEdit.editingFinished.connect(self.setAutoEndTime)
+		self.ui.duration_lineEdit.editingFinished.connect(self.setAutoDuration)
 		self.ui.shiftFrame_pushButton.clicked.connect(self.shiftKeyFrame)
 		self.ui.disableShot_pushButton.clicked.connect(self.toggledShot)
 		self.ui.deleteShot_pushButton.clicked.connect(self.deleteShot)
@@ -122,6 +124,8 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.editEnd_lineEdit.setEnabled(not self.ui.moveShot_checkBox.isChecked())
 		self.ui.moveShot_lineEdit.setText('0')
 		self.setLogo()
+		self.ui.prefix_lineEdit.setText(self.shotPrefix)
+		self.ui.prefix_lineEdit.setEnabled(False)
 
 
 	def setLogo(self) : 
@@ -164,6 +168,8 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.listWidget.clear()
 
 		if self.shotInfo : 
+			self.occupiedFrame = []
+
 			for eachShot in sorted(self.shotInfo) : 
 
 				shotName = eachShot 
@@ -174,6 +180,15 @@ class MyForm(QtGui.QMainWindow):
 				sequenceEndTime = self.shotInfo[eachShot]['sequenceEndTime']
 				mute = self.shotInfo[eachShot]['mute']
 				errorText = []
+				overlapStatus = False
+
+				# calculate occupiedFrame
+				for i in range(int(startTime), int(endTime) + 1) : 
+					if not i in self.occupiedFrame : 
+						self.occupiedFrame.append(i)
+
+					else : 
+						overlapStatus = True
 
 				text1 = str(shotName)
 				text2 = str(startTime)
@@ -198,6 +213,7 @@ class MyForm(QtGui.QMainWindow):
 					text9 = 'Disabled'
 
 
+				# error path =================================================================
 				# check if start and end frame is valid
 				if startTime > endTime : 
 					color = [100, 20, 20]
@@ -206,11 +222,16 @@ class MyForm(QtGui.QMainWindow):
 				# check if shot stretch
 				if not startTime == sequenceStartTime or not endTime == sequenceEndTime : 
 					color = [100, 20, 20]
+					print startTime, sequenceStartTime, endTime, sequenceEndTime
 					errorText.append('Shot stretch')
 
 				if duration <= 1 : 
 					color = [100, 20, 20]
 					errorText.append('Duration error ')
+
+				if overlapStatus : 
+					color = [100, 20, 20]
+					errorText.append('Overlaping shot')
 
 				if len(errorText) == 1 : 
 					text8 = errorText[0]
@@ -218,10 +239,12 @@ class MyForm(QtGui.QMainWindow):
 				elif len(errorText) > 1 : 
 					text8 = '%s errors' % len(errorText)
 
-				print shotName
 
 				for eachError in errorText : 
 					self.printLog('Error %s' % eachError)
+
+
+				# display ========================================================================
 
 				
 				texts = [text1, text2, text3, text4, text5, text6, text7, text8, text9]
@@ -337,6 +360,7 @@ class MyForm(QtGui.QMainWindow):
 			currentShot = None
 			prevShot = None
 			nextShot = None 
+			prefix = self.shotPrefix
 
 			allRow = self.ui.listWidget.count()
 
@@ -345,21 +369,33 @@ class MyForm(QtGui.QMainWindow):
 			if self.shotInfo : 
 				lastShot = self.getIndexWidgetItem(allRow - 1)[0]
 
+				# get digit ####
 				lastShotNum = re.findall('\d+', lastShot)[0]
+
+				# calculate last shot
 				newLastShot = ((int(lastShotNum)/10) * 10) + 10
 
+				# calculate padding
 				padding = len(lastShotNum)
 
+				# insert padding
 				tmp = '"%0' + str(padding) + 'd" % newLastShot' 
 				newLastShotString = eval(tmp)
 
+				# replace existing digit by new digit
+				# 010 replace by 020 -> shot_020
 				newLastShotName = lastShot.replace(lastShotNum, newLastShotString)
 
+				# get prefix 
+				prefix = lastShot.replace(lastShotNum, '')
+
 			else : 
-				newLastShotName = 'shot_010'
+				# shot_010
+				newLastShotName = '%s010' % prefix
 
 			if self.ui.last_radioButton.isChecked() : 
-				self.ui.shotName_lineEdit.setText(newLastShotName)
+				self.ui.prefix_lineEdit.setText(prefix)
+				self.ui.shotName_lineEdit.setText(newLastShotString)
 
 
 			# if 1 item is selected
@@ -406,16 +442,21 @@ class MyForm(QtGui.QMainWindow):
 
 				
 
+				pPrefix = currentShot.replace(currentShotNum, '')
 				newPrevShotName = currentShot.replace(currentShotNum, newPrevShotString)
+
+				nPrefix = currentShot.replace(currentShotNum, '')
 				newNextShotName = currentShot.replace(currentShotNum, newNextShotString)
 				
 
 				# return data on choice from radioButton
 				if self.ui.before_radioButton.isChecked() : 
-					self.ui.shotName_lineEdit.setText(newPrevShotName)
+					self.ui.prefix_lineEdit.setText(pPrefix)
+					self.ui.shotName_lineEdit.setText(newPrevShotString)
 
 				if self.ui.after_radioButton.isChecked() : 
-					self.ui.shotName_lineEdit.setText(newNextShotName)
+					self.ui.prefix_lineEdit.setText(nPrefix)
+					self.ui.shotName_lineEdit.setText(newNextShotString)
 
 
 	def setShotAutoDuration(self) : 
@@ -499,11 +540,18 @@ class MyForm(QtGui.QMainWindow):
 
 	# make camera function
 	def addShot(self) : 
-		shotName = str(self.ui.shotName_lineEdit.text())
+		prefix = str(self.ui.prefix_lineEdit.text())
+		shotNumber = int(str(self.ui.shotName_lineEdit.text()))
+		tmp = '"%0' + str(self.shotPadding) + 'd" % shotNumber' 
+		shotNumberStr = eval(tmp)
+		shotName = '%s%s' % (prefix, str(self.ui.shotName_lineEdit.text()))
+
 		startTime = float(self.ui.start_lineEdit.text())
 		endTime = float(self.ui.end_lineEdit.text())
 		duration = endTime - startTime + 1
 		pushValue = duration
+		frameList = [i for i in range(int(startTime), int(endTime) + 1)]
+		overlapStatus = False
 
 		currentIndex = self.ui.listWidget.currentRow()
 
@@ -516,17 +564,26 @@ class MyForm(QtGui.QMainWindow):
 				self.moveShotCmd(currentIndex, pushValue)
 		
 		if not self.ui.camera_checkBox.isChecked() : 
-			cam = cameraRig.referenceCamera(self.cameraRigFile, shotName)
+			if self.ui.noMove_checkBox.isChecked() : 
+				for i in frameList : 
+					if i in self.occupiedFrame : 
+						overlapStatus = True
 
-			if cam : 
-				cameraRig.setStartEndTime(shotName, startTime, endTime)
-				shot = cameraRig.makeSequencerShot(shotName, cam, startTime, endTime)
+			if not overlapStatus : 
+				cam = cameraRig.referenceCamera(self.cameraRigFile, shotName)
 
-				try : 
-					cameraRig.linkCameraToShot(shotName, shot)
+				if cam : 
+					cameraRig.setStartEndTime(shotName, startTime, endTime)
+					shot = cameraRig.makeSequencerShot(shotName, cam, startTime, endTime)
 
-				except Exception as error : 
-					print error
+					try : 
+						cameraRig.linkCameraToShot(shotName, shot)
+
+					except Exception as error : 
+						print error
+
+			else : 
+				self.completeDialog('Error', 'Cannot crate verlapping shot')
 
 			# cameraRig.makeCameraRig(self.cameraRigFile, shotName, startTime, endTime)
 
