@@ -115,6 +115,7 @@ class MyForm(QtGui.QMainWindow):
 		self.setShotAutoDuration()
 		self.setCameraList()
 		self.setUI()
+		self.setShotgun()
 
 
 	def setUI(self) : 
@@ -135,12 +136,37 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.logo_label.setPixmap(QtGui.QPixmap(iconPath).scaled(200, 40, QtCore.Qt.KeepAspectRatio))
 
 
+	def setShotgun(self) : 
+		self.setProjectInfo()
+
+
+	def setProjectInfo(self) : 
+		currentScene = mc.file(q = True, sn = True)
+
+		if currentScene : 
+			path = os.path.splitdrive(currentScene)[-1]
+			pathEles = path.split('/')
+
+			project = pathEles[2]
+			episode = pathEles[4]
+			sequence = pathEles[6]
+			shotType = pathEles[7]
+
+			self.ui.project_label.setText('%s_%s' % (project, episode))
+			self.ui.episode_label.setText(episode)
+			self.ui.sequence_label.setText(sequence)
+			self.ui.shot_label.setText(shotType)
+
+
+
+
 
 	# command =============================================================================================
 
 	def getShotInfo(self) : 
 		shots = mc.ls(type = 'shot')
 		shotInfo = dict()
+		i = 0
 
 		for eachShot in shots : 
 			startTime = mc.shot(eachShot, q = True, startTime = True)
@@ -149,15 +175,35 @@ class MyForm(QtGui.QMainWindow):
 			sequenceStartTime = mc.shot(eachShot, q = True, sequenceStartTime = True)
 			sequenceEndTime = mc.shot(eachShot, q = True, sequenceEndTime = True)
 			status = mc.shot(eachShot, q = True, mute = True)
+			gapStart = False
+			gapEnd = False
+
+			if not i == 0 : 
+				previousEndFrame = mc.shot(shots[i-1], q = True, endTime = True)
+
+				if not (startTime - previousEndFrame) == 1 : 
+					gapStart = True
+
+
+			if not i == (len(shots) - 1) : 
+				nextShotStartFrame = mc.shot(shots[i+1], q = True, startTime = True)
+
+				if not (nextShotStartFrame - endTime) == 1 : 
+					gapEnd = True
+
+
 
 			shotInfo[eachShot] = {	'startTime': startTime, 
 									'endTime': endTime, 
 									'duration': duration, 
 									'sequenceStartTime': sequenceStartTime, 
 									'sequenceEndTime': sequenceEndTime, 
-									'mute': status
+									'mute': status, 
+									'gap': [gapStart, gapEnd]
 
 									}
+
+			i+=1
 
 		return shotInfo
 
@@ -179,6 +225,7 @@ class MyForm(QtGui.QMainWindow):
 				sequenceStartTime = self.shotInfo[eachShot]['sequenceStartTime']
 				sequenceEndTime = self.shotInfo[eachShot]['sequenceEndTime']
 				mute = self.shotInfo[eachShot]['mute']
+				gap = self.shotInfo[eachShot]['gap']
 				errorText = []
 				overlapStatus = False
 
@@ -204,8 +251,16 @@ class MyForm(QtGui.QMainWindow):
 				color = [20, 20, 20]
 				text1Color = [255, 255, 0]
 				text2Color = [100, 180, 255]
-				text3Color = [0, 200, 0]
-				text4Color = [200, 0, 0]
+				text3Color = [100, 180, 255]
+				text4Color = [100, 180, 255]
+				text5Color = [0, 200, 0]
+				text6Color = [0, 200, 0]
+				text7Color = [0, 200, 0]
+				text8Color = [200, 0, 0]
+				text9Color = [200, 0, 0]
+
+				textIndex = 0
+				textBgColor = [0, 0, 0]
 
 				# check if disabled
 				if mute : 
@@ -244,13 +299,21 @@ class MyForm(QtGui.QMainWindow):
 					self.printLog('Error %s' % eachError)
 
 
+				# checking for gap start and end
+				if gap[0] : 
+					text2Color = [180, 30, 30]
+
+				if gap[1] : 
+					text4Color = [180, 30, 30]
+
+
 				# display ========================================================================
 
 				
 				texts = [text1, text2, text3, text4, text5, text6, text7, text8, text9]
-				textColors = [text1Color, text2Color, text2Color, text2Color, text3Color, text3Color, text3Color, text4Color, text4Color]
+				textColors = [text1Color, text2Color, text3Color, text4Color, text5Color, text6Color, text7Color, text8Color, text9Color]
 
-				self.addCustomListWidgetItem(texts, color, textColors, self.defaultIcon, 40)
+				self.addCustomListWidgetItem(texts, color, textColors, self.defaultIcon, 40, textIndex, textBgColor)
 
 
 	def itemSelectCommand(self) : 
@@ -391,72 +454,75 @@ class MyForm(QtGui.QMainWindow):
 
 			else : 
 				# shot_010
-				newLastShotName = '%s010' % prefix
+				newLastShotName = '%s' % prefix
+				newLastShotString = '010'
+
 
 			if self.ui.last_radioButton.isChecked() : 
 				self.ui.prefix_lineEdit.setText(prefix)
 				self.ui.shotName_lineEdit.setText(newLastShotString)
 
 
-			# if 1 item is selected
+			if self.shotInfo : 
+				# if 1 item is selected
 
-			if self.ui.listWidget.currentItem() : 
-				currentIndex = self.ui.listWidget.currentRow()
-				prevIndex = currentIndex - 1
-				nextIndex = currentIndex + 1
+				if self.ui.listWidget.currentItem() : 
+					currentIndex = self.ui.listWidget.currentRow()
+					prevIndex = currentIndex - 1
+					nextIndex = currentIndex + 1
 
-				currentShot = self.getIndexWidgetItem(currentIndex)[0]
+					currentShot = self.getIndexWidgetItem(currentIndex)[0]
 
-				if prevIndex >= 0 : 
-					prevShot = self.getIndexWidgetItem(prevIndex)[0]
+					if prevIndex >= 0 : 
+						prevShot = self.getIndexWidgetItem(prevIndex)[0]
 
-				if nextIndex <= allRow - 1 : 
-					nextShot = self.getIndexWidgetItem(nextIndex)[0]
-
-
-				# calculate shot
-				# assume that shot has only one set of digit -> shot_0010
-				currentShotNum = re.findall('\d+', currentShot)[0]
-				padding = len(currentShotNum)
-
-				if prevShot : 
-					prevShotNum = re.findall('\d+', prevShot)[0]
-					newPrevShot = (int(currentShotNum) + int(prevShotNum)) / 2
-
-				else : 
-					newPrevShot = int(currentShotNum) - 5
-
-				if nextShot : 
-					nextShotNum = re.findall('\d+', nextShot)[0]
-					newNextShot = (int(currentShotNum) + int(nextShotNum)) / 2
-
-				else : 
-					newNextShot = int(currentShotNum) + 10
+					if nextIndex <= allRow - 1 : 
+						nextShot = self.getIndexWidgetItem(nextIndex)[0]
 
 
-				tmp = '"%0' + str(padding) + 'd" % newPrevShot' 
-				newPrevShotString = eval(tmp)
+					# calculate shot
+					# assume that shot has only one set of digit -> shot_0010
+					currentShotNum = re.findall('\d+', currentShot)[0]
+					padding = len(currentShotNum)
 
-				tmp = '"%0' + str(padding) + 'd" % newNextShot' 
-				newNextShotString = eval(tmp)
+					if prevShot : 
+						prevShotNum = re.findall('\d+', prevShot)[0]
+						newPrevShot = (int(currentShotNum) + int(prevShotNum)) / 2
 
-				
+					else : 
+						newPrevShot = int(currentShotNum) - 5
 
-				pPrefix = currentShot.replace(currentShotNum, '')
-				newPrevShotName = currentShot.replace(currentShotNum, newPrevShotString)
+					if nextShot : 
+						nextShotNum = re.findall('\d+', nextShot)[0]
+						newNextShot = (int(currentShotNum) + int(nextShotNum)) / 2
 
-				nPrefix = currentShot.replace(currentShotNum, '')
-				newNextShotName = currentShot.replace(currentShotNum, newNextShotString)
-				
+					else : 
+						newNextShot = int(currentShotNum) + 10
 
-				# return data on choice from radioButton
-				if self.ui.before_radioButton.isChecked() : 
-					self.ui.prefix_lineEdit.setText(pPrefix)
-					self.ui.shotName_lineEdit.setText(newPrevShotString)
 
-				if self.ui.after_radioButton.isChecked() : 
-					self.ui.prefix_lineEdit.setText(nPrefix)
-					self.ui.shotName_lineEdit.setText(newNextShotString)
+					tmp = '"%0' + str(padding) + 'd" % newPrevShot' 
+					newPrevShotString = eval(tmp)
+
+					tmp = '"%0' + str(padding) + 'd" % newNextShot' 
+					newNextShotString = eval(tmp)
+
+					
+
+					pPrefix = currentShot.replace(currentShotNum, '')
+					newPrevShotName = currentShot.replace(currentShotNum, newPrevShotString)
+
+					nPrefix = currentShot.replace(currentShotNum, '')
+					newNextShotName = currentShot.replace(currentShotNum, newNextShotString)
+					
+
+					# return data on choice from radioButton
+					if self.ui.before_radioButton.isChecked() : 
+						self.ui.prefix_lineEdit.setText(pPrefix)
+						self.ui.shotName_lineEdit.setText(newPrevShotString)
+
+					if self.ui.after_radioButton.isChecked() : 
+						self.ui.prefix_lineEdit.setText(nPrefix)
+						self.ui.shotName_lineEdit.setText(newNextShotString)
 
 
 	def setShotAutoDuration(self) : 
@@ -597,11 +663,16 @@ class MyForm(QtGui.QMainWindow):
 
 	def doShotEditDuration(self) : 
 		# shot edit
-		if not self.ui.moveShot_checkBox.isChecked() : 
-			self.shotEditDurationCmd()
+		try : 
+			if not self.ui.moveShot_checkBox.isChecked() : 
+				self.shotEditDurationCmd()
 
-		else : 
-			self.moveShot()
+			else : 
+				self.moveShot()
+
+		except Exception as error : 
+			self.completeDialog('Error', 'Shots are locked and cannot be modified. Please try Rebuild Shot')
+			print error
 
 
 
@@ -1000,13 +1071,16 @@ class MyForm(QtGui.QMainWindow):
 
 	# UI widget 
 
-	def addCustomListWidgetItem(self, texts, color, textColors, iconPath, size = 90) : 
+	def addCustomListWidgetItem(self, texts, color, textColors, iconPath, size = 90, textIndex = 0, textBgColor = [0, 0, 0]) : 
 
 		myCustomWidget = cw.customQWidgetItem()
 		myCustomWidget.setTexts(texts)
 
 		myCustomWidget.setTextColors(textColors)
 
+
+		if not textIndex == 0 : 
+			myCustomWidget.setBackgroundColor(textIndex, textBgColor)
 
 		# myCustomWidget.setIcon(iconPath, size)
 
@@ -1016,6 +1090,7 @@ class MyForm(QtGui.QMainWindow):
 		self.ui.listWidget.addItem(item)
 		self.ui.listWidget.setItemWidget(item, myCustomWidget)
 		item.setBackground(QtGui.QColor(color[0], color[1], color[2]))
+
 
 
 	def getCurrentWidgetItem(self) : 

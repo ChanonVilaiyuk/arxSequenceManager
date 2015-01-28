@@ -496,6 +496,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QLineEdit" name="prefix_lineEdit">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QLineEdit" name="shotName_lineEdit">
                <property name="text">
                 <string/>
@@ -617,7 +624,7 @@
            <item>
             <widget class="QCheckBox" name="noMove_checkBox">
              <property name="text">
-              <string>Don't move existing shot (ignore overlap)</string>
+              <string>Add shot in gap / no move other shots</string>
              </property>
             </widget>
            </item>

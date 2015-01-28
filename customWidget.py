@@ -98,6 +98,28 @@ class customQWidgetItem(QtGui.QWidget) :
 		self.text9Label.setStyleSheet('color: rgb(%s, %s, %s);' % (colors[8][0], colors[8][1], colors[8][2]))
 
 
+	def setBackgroundColor(self, textIndex, colors) : 
+		
+		if textIndex == 1 : 
+			self.text1Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 2 : 
+			self.text2Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 3 : 
+			self.text3Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 4 : 
+			self.text4Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 5 : 
+			self.text5Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 6 : 
+			self.text6Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 7 : 
+			self.text7Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 8 : 
+			self.text8Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+		if textIndex == 9 : 
+			self.text9Label.setStyleSheet('background-color: rgb(%s, %s, %s);' % (colors[0], colors[1], colors[2]))
+
+
 	# def setIcon(self, iconPath, size) : 
 	# 	self.iconQLabel.setPixmap(QtGui.QPixmap(iconPath).scaled(size, size, QtCore.Qt.KeepAspectRatio))
 
