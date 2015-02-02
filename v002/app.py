@@ -39,9 +39,6 @@ reload(cameraRig)
 from arxSequencerManager import shiftFrame
 reload(shiftFrame)
 
-from sgUtils import sgUtils
-reload(sgUtils)
-
 moduleDir = sys.modules[__name__].__file__
 
 
@@ -152,7 +149,10 @@ class MyForm(QtGui.QMainWindow):
 		self.setProjectInfo()
 
 		if self.readShotgun : 
-			self.sgData = self.getShotgunData()
+			from sgUtils import sgUtils
+			reload(sgUtils)
+
+			self.sgData, self.allSeqInfo = self.getShotgunData(sgUtils)
 
 
 
@@ -175,12 +175,14 @@ class MyForm(QtGui.QMainWindow):
 
 
 
-	def getShotgunData(self) : 
+	def getShotgunData(self, sg) : 
 		project = str(self.ui.project_label.text())
 		sequenceName = str(self.ui.sequence_label.text())
 
-		sequenceInfo = sgUtils.sgGetShotTime(project, sequenceName)
+		sequenceInfo = sg.sgGetShotTime(project, sequenceName)
+		sequenceInfo = sg.sgGetAllShotTime(project)
 		dictInfo = dict()
+		allSeqInfo = dict()
 
 		sqPrefix = self.sequencePrefix
 		shotPrefix = self.shotPrefix
@@ -188,28 +190,6 @@ class MyForm(QtGui.QMainWindow):
 		if sequenceInfo : 
 			for each in sequenceInfo : 
 				sgShotName = each['code']
-
-				# sg shot e100_040_010 -> episode_sequence_shot convert to shot_010
-				shotName = '%s%s' % (self.shotPrefix, sgShotName.split('_')[-1])
-
-				if not 'layout' in sgShotName : 
-					dictInfo[shotName] = each
-
-			return dictInfo
-
-
-
-	def getShotgunAllSequencesData(self) : 
-		project = str(self.ui.project_label.text())
-		sequenceName = str(self.ui.sequence_label.text())
-
-		sequenceInfo = sgUtils.sgGetAllShotTime(project)
-		allSeqInfo = dict()
-
-		sqPrefix = self.sequencePrefix
-
-		if sequenceInfo : 
-			for each in sequenceInfo : 
 				sgSequenceName = each['sg_sequence']['name']
 
 				if not sgSequenceName in allSeqInfo.keys() : 
@@ -218,9 +198,17 @@ class MyForm(QtGui.QMainWindow):
 				else : 
 					allSeqInfo[sgSequenceName].append(each)
 
+				if sgSequenceName == sequenceName : 
+
+					# sg shot e100_040_010 -> episode_sequence_shot convert to shot_010
+					shotName = '%s%s' % (self.shotPrefix, sgShotName.split('_')[-1])
+
+					if not 'layout' in sgShotName : 
+						dictInfo[shotName] = each
 
 
-		return allSeqInfo
+			return dictInfo, allSeqInfo
+
 
 
 	def pullShotgunData(self) : 
@@ -232,17 +220,8 @@ class MyForm(QtGui.QMainWindow):
 	def pushShotgunData(self) : 
 		# load shotgun info to get fresh data
 		self.pullShotgunData()
-
-		# update cut in, cut out
-		result = self.pushMayaSgCut()
-
-		# update timeline_in, timeline_out
-		if result : 
-			result2 = self.updateTimelineDuration()
-
-			if result2 : 
-				self.completeDialog('Success', 'Update shotgun success!')
-
+		self.pushMayaSgCut()
+		self.updateTimelineDuration()
 		self.refreshUI()
 
 
@@ -261,7 +240,7 @@ class MyForm(QtGui.QMainWindow):
 		errorInfo = []
 
 		batch_data = []
-		self.batch_dataBackup = []
+		self.batch_data2 = []
 
 		'''check all shot in scene =======================================================================
 		# if exists in shotgun, update. if not, create
@@ -358,7 +337,7 @@ class MyForm(QtGui.QMainWindow):
 			data2.update({'sg_status_list': self.sgData[each]['sg_status_list']})
 			data2.update({'sg_timeline_in': self.sgData[each]['sg_timeline_in']})
 			data2.update({'sg_timeline_out': self.sgData[each]['sg_timeline_out']})
-			self.batch_dataBackup.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":data2})
+			self.batch_data2.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":data2})
 		
 
 		''' all data is ready ===========================================================================
@@ -376,7 +355,9 @@ class MyForm(QtGui.QMainWindow):
 					self.printLog('Backup %s Success' % backupResult)
 					sgResult = self.sgBatch(batch_data)	
 
-					return sgResult
+					if sgResult : 
+						message = 'Update shotgun success'
+						self.completeDialog('Success', message)
 
 		else : 
 			message = str()
@@ -390,7 +371,6 @@ class MyForm(QtGui.QMainWindow):
 
 	def updateTimelineDuration(self) : 
 		# update premiere duration for all sequence after current sequence
-		self.allSeqInfo = self.getShotgunAllSequencesData()
 
 		# find current sequence
 		currentSequence = str(self.ui.sequence_label.text())
@@ -399,6 +379,7 @@ class MyForm(QtGui.QMainWindow):
 		pTimelineOut = 0
 		logs = []
 		batch_data = []
+		batch_dataBk = []
 
 		for eachSequence in sorted(self.allSeqInfo) : 
 			startShot = int()
@@ -452,7 +433,7 @@ class MyForm(QtGui.QMainWindow):
 							# shotgun command backup
 							dataBk.update({'sg_timeline_in': timelineIn})
 							dataBk.update({'sg_timeline_out': timelineOut})
-							self.batch_dataBackup.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":dataBk})
+							batch_dataBk.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":dataBk})
 
 
 							shotCount += 1
@@ -460,9 +441,6 @@ class MyForm(QtGui.QMainWindow):
 					seqCount += 1
 
 		self.writeLog(str(('\n\r').join(logs)))
-		result = self.sgBatch(batch_data)
-
-		return result
 
 
 
@@ -480,7 +458,7 @@ class MyForm(QtGui.QMainWindow):
 		if not os.path.exists(self.backupLog) : 
 			os.makedirs(self.backupLog)
 
-		data = str(self.batch_dataBackup)
+		data = str(self.batch_data2)
 		logFile = '%s_backupCutSg_%s.txt' % (fileName, str(datetime.now()).replace(' ', '_').replace(':', '-').split('.')[0])
 		dst = '%s/%s' % (self.backupLog, logFile)
 		result = fileUtils.writeFile(dst, data)
