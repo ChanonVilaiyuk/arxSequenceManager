@@ -25,4 +25,19 @@ cameraRigFile:U:/projects/ttv/assets/publish/etc/camera/rigs/hand_camera_rig_MAS
 defaultDuration:25
 
 # default start frame
-defaultStartFrame:101
+defaultStartFrame:1001
+
+# shot prefix
+shotPrefix:shot_
+
+# shot padding
+shotPadding:3
+
+# sequence prefix
+sequencePrefix:sq
+
+# backup log
+backupLog:U:/extensions/studioTools/python/scriptLogs/arxSequenceManager/rollBackCut
+
+# script log
+scriptLog:U:/extensions/studioTools/python/scriptLogs/arxSequenceManager
