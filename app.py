@@ -23,8 +23,9 @@ from shiboken import wrapInstance
 from arxSequencerManager import ui as ui
 reload(ui)
 
-from arxSequencerManager import dialog
+from arxSequencerManager import dialog, restoreDialog
 reload(dialog)
+reload(restoreDialog)
 
 from tools.utils import config, fileUtils
 reload(config)
@@ -81,6 +82,7 @@ class MyForm(QtGui.QMainWindow):
 
 		self.backupLog = self.configData['backupLog']
 		self.scriptLogs = self.configData['scriptLog']
+		self.backupFile = None
 
 		self.readShotgun = True
 		self.echo = True
@@ -229,10 +231,8 @@ class MyForm(QtGui.QMainWindow):
 		self.refreshUI()
 
 
-	def pushShotgunData(self) : 
-		# load shotgun info to get fresh data
-		self.pullShotgunData()
-
+	def pushShotgunData(self) : 	
+		self.backupFile = self.startBackupFile()
 		# update cut in, cut out
 		result = self.pushMayaSgCut()
 
@@ -249,6 +249,9 @@ class MyForm(QtGui.QMainWindow):
 
 	def pushMayaSgCut(self) : 
 		# pushing maya cut information to shotgun
+
+		# load shotgun data again
+		self.pullShotgunData()
 	
 		# load all items from listWidget
 		allItems = self.getAllListWidgetItems()
@@ -370,13 +373,14 @@ class MyForm(QtGui.QMainWindow):
 			result = self.messageBox('Update all shotgun cut data', 'Update all shotgun cut data might take several minutes. \nDo you want to proceed?')
 
 			if result == QtGui.QMessageBox.Ok : 
-				backupResult = self.backupData('%s_%s' % (project, sequenceName))
 
-				if backupResult : 
-					self.printLog('Backup %s Success' % backupResult)
-					sgResult = self.sgBatch(batch_data)	
+				# backup data to log
+				self.backupData()
 
-					return sgResult
+				# run command
+				sgResult = self.sgBatch(batch_data)	
+
+				return sgResult
 
 		else : 
 			message = str()
@@ -460,6 +464,11 @@ class MyForm(QtGui.QMainWindow):
 					seqCount += 1
 
 		self.writeLog(str(('\n\r').join(logs)))
+
+		# backup data
+		self.backupData()
+
+		# run command
 		result = self.sgBatch(batch_data)
 
 		return result
@@ -475,18 +484,32 @@ class MyForm(QtGui.QMainWindow):
 		return result
 
 
-	def backupData(self, fileName) : 
+
+	def startBackupFile(self) : 
+		project = str(self.ui.project_label.text())
+		sequenceName = str(self.ui.sequence_label.text()).replace(self.sequencePrefix, '')
+		backupFile = '%s_%s_%s' % (project, sequenceName, str(datetime.now()).replace(' ', '_').replace(':', '-').split('.')[0])
+
+		backupFile = '%s/%s' % (self.backupLog, backupFile)
 
 		if not os.path.exists(self.backupLog) : 
 			os.makedirs(self.backupLog)
 
-		data = str(self.batch_dataBackup)
-		logFile = '%s_backupCutSg_%s.txt' % (fileName, str(datetime.now()).replace(' ', '_').replace(':', '-').split('.')[0])
-		dst = '%s/%s' % (self.backupLog, logFile)
-		result = fileUtils.writeFile(dst, data)
+		dst = backupFile
+		data = '[]'
+		fileUtils.writeFile(dst, data)
 
-		return result
+		return backupFile
 
+
+	def backupData(self) : 
+
+		if os.path.exists(self.backupFile) : 
+			data = eval(fileUtils.readFile(self.backupFile))
+			data = data + self.batch_dataBackup
+			result = fileUtils.writeFile(self.backupFile, str(data))
+
+			return result
 
 
 	def restoreBackup(self) : 
@@ -498,19 +521,18 @@ class MyForm(QtGui.QMainWindow):
 		files = fileUtils.listFile(dst)
 		validFiles = []
 
-		for eachBackupFile in files : 
-			print fileName
-			print eachBackupFile
-			if fileName in eachBackupFile : 
-				validFiles.append(eachBackupFile)
+		myDialog = Dialog2(self.backupLog)
+		myDialog.exec_()
 
-		if validFiles : 
-			latestBackup = sorted(validFiles)[-1]
+		selFile = myDialog.file
 
-			dst = '%s/%s' % (dst, latestBackup)
-			batch_data = eval(fileUtils.readFile(dst))
+		if selFile : 
 
-			result = self.messageBox('Restore previous update', 'Restore previous update shotgun data %s. \nDo you want to proceed?' % latestBackup)
+			restoreFile = '%s/%s' % (self.backupLog, selFile)
+
+			batch_data = eval(fileUtils.readFile(restoreFile))
+
+			result = self.messageBox('Restore previous update', 'Restore previous update shotgun data %s. \nDo you want to proceed?' % selFile)
 
 			if result == QtGui.QMessageBox.Ok : 
 
@@ -518,8 +540,6 @@ class MyForm(QtGui.QMainWindow):
 
 				self.completeDialog('Success', 'Restore previous data success.')
 
-		else : 
-			self.completeDialog('Information', 'No valid file, cannot restore previuos data')
 
 
 
@@ -1612,5 +1632,44 @@ class MyDialog(QtGui.QDialog, MyForm):
 		self.close()
 
 
+# backup dialog
+class Dialog2(QtGui.QDialog, MyForm):
+
+	def __init__(self, backupPath, parent=None):
+		self.count = 0
+		#Setup Window
+		super(Dialog2, self).__init__(parent)
+		# QtGui.QWidget.__init__(self, parent)
+		self.ui = restoreDialog.Ui_restore_dialog()
+		self.ui.setupUi(self)
+
+		self.backupLog = backupPath
+		self.file = None
+		self.initFunctions()
 
 
+	def initFunctions(self) : 
+		self.listFile()
+		self.ui.pushButton.clicked.connect(self.doRestore)
+
+
+
+	def listFile(self) : 
+		if os.path.exists(self.backupLog) : 
+			files = fileUtils.listFile(self.backupLog)
+
+			self.ui.listWidget.clear()
+
+			for each in files : 
+				self.ui.listWidget.addItem(each)
+
+
+
+	def doRestore(self) : 
+		sel = self.ui.listWidget.currentItem()
+
+		if sel : 
+			item = str(sel.text())
+
+			self.file = item
+			self.close()
