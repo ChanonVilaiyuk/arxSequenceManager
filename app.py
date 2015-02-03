@@ -77,6 +77,7 @@ class MyForm(QtGui.QMainWindow):
 		self.shotPrefix = self.configData['shotPrefix']
 		self.shotPadding = self.configData['shotPadding']
 		self.sequencePrefix = self.configData['sequencePrefix']
+		self.shotTaskTemplateID = int(self.configData['shotTaskTemplateID'])
 
 		self.cameraRigFile = self.configData['cameraRigFile']
 
@@ -232,18 +233,78 @@ class MyForm(QtGui.QMainWindow):
 
 
 	def pushShotgunData(self) : 	
+		# start backup file
 		self.backupFile = self.startBackupFile()
-		# update cut in, cut out
-		result = self.pushMayaSgCut()
 
-		# update timeline_in, timeline_out
-		if result : 
-			result2 = self.updateTimelineDuration()
+		# lock timeline so other users won't update the same time
+		lockTimeline = self.lockTimeline(True)
 
-			if result2 : 
-				self.completeDialog('Success', 'Update shotgun success!')
+		# if lock timeline success, then proceed
+		if lockTimeline == True : 
 
-		self.refreshUI()
+			try : 
+
+				# update cut in, cut out
+				result = self.pushMayaSgCut()
+
+				# update timeline_in, timeline_out
+				if result : 
+					result2 = self.updateTimelineDuration()
+
+					if result2 : 
+
+						# unlock timeline
+						result3 = self.lockTimeline(False)
+
+						if result3 : 
+							self.completeDialog('Success', 'Update shotgun success!')
+
+				else : 
+					# cancel dialog
+					self.lockTimeline(False)
+
+			except Exception as error : 
+				self.lockTimeline(False)
+				self.completeDialog('Error', 'Error: %s' % str(error))
+
+			self.refreshUI()
+
+
+		# timeline already locked, other users updating. giving error message.
+		else : 
+			self.completeDialog('Error', 'Another user is updating shotgun, please try again in a few minute')
+
+
+
+	def lockTimeline(self, setState) : 
+		# find project
+		project = str(self.ui.project_label.text())
+		projectInfo = sgUtils.sg.find_one('Project', [['name', 'is', project]], ['name', 'id', 'sg_updating_timeline'])
+
+		timelineStatus = projectInfo['sg_updating_timeline']
+
+		# if setState == True and timeline isn't lock, then lock
+		# but if timeline already lock, return False
+		if setState == True : 
+			if not setState == timelineStatus : 
+				# lock timeline
+				data = {'sg_updating_timeline': setState}
+				sgUtils.sg.update('Project', projectInfo['id'], data)
+
+				result = True
+
+			else : 
+				result = False
+
+		else : 
+			# unlock timelin
+			data = {'sg_updating_timeline': setState}
+			sgUtils.sg.update('Project', projectInfo['id'], data)
+
+			result = True
+
+
+		return result
 
 
 
@@ -273,6 +334,7 @@ class MyForm(QtGui.QMainWindow):
 
 		for eachShot in allItems : 
 			data = dict()
+			data2 = dict()
 			shotName = eachShot[0]
 			sgCutIn = int(float(eachShot[1]))
 			sgCutOut = int(float(eachShot[3]))
@@ -303,6 +365,10 @@ class MyForm(QtGui.QMainWindow):
 					# set working status to ip = "in progress"
 					data.update({'sg_status_list': 'ip'})
 					batch_data.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":data})	
+
+					# backup changes
+					data2.update({'sg_status_list': self.sgData[shotName]['sg_status_list']})
+					self.batch_dataBackup.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":data2})
 					
 					self.printLog('%s will be updated' % shotName)
 
@@ -313,8 +379,24 @@ class MyForm(QtGui.QMainWindow):
 					# create shot
 
 					# set working status to ip
-					data.update({'sg_status_list': 'ip'})
-					batch_data.append({"request_type":"create","entity_type":"Asset","data":data})
+					# collect data for create shot
+					sgSequenceName = str(self.ui.sequence_label.text())
+					projectEntity = sgUtils.sg.find_one('Project', [['name', 'is', project]], ['id'])
+					sequenceEntity = sgUtils.sg.find_one('Sequence', [['project.Project.name', 'is', project], ['code', 'is', sgSequenceName]], ['id'])
+					sgShotName = '%s_%s_%s' % (episode, sequenceName, shotName.replace(self.shotPrefix, ''))
+
+					data={
+							'project': projectEntity, 
+							'code': sgShotName, 
+							'task_template': {'type': 'TaskTemplate', 'id': self.shotTaskTemplateID}, 
+							'sg_sequence': sequenceEntity, 
+							'sg_cut_in': sgCutIn, 
+							'sg_cut_out': sgCutOut, 
+							'sg_cut_duration': sgDuration, 
+							'sg_status_list': 'ip'
+						}
+
+					batch_data.append({"request_type":"create","entity_type":"Shot","data":data})
 					
 					self.printLog('%s does not exists, shot will be created.' % shotName)
 
@@ -382,6 +464,9 @@ class MyForm(QtGui.QMainWindow):
 
 				return sgResult
 
+			else : 
+				return False
+
 		else : 
 			message = str()
 			for each in errorInfo : 
@@ -427,39 +512,45 @@ class MyForm(QtGui.QMainWindow):
 						timelineOut = eachShot['sg_timeline_out']
 						duration = eachShot['sg_cut_duration']
 						entityID = eachShot['id']
+						status = eachShot['sg_status_list']
 						data = dict()
 						dataBk = dict()
 
 						if not 'layout'	in shotName : 
 
-							if seqCount == 0 and shotCount == 0 : 
-								# print 'This is start shot %s %s' % (eachSequence, shotName)
-								timelineInStart = timelineIn
-								nTimelineIn = timelineInStart
-								nTimelineOut = nTimelineIn + duration
-								pTimelineOut = nTimelineOut
+							if not status == 'omt' : 
+
+								if seqCount == 0 and shotCount == 0 : 
+									# print 'This is start shot %s %s' % (eachSequence, shotName)
+									timelineInStart = timelineIn
+									nTimelineIn = timelineInStart
+									nTimelineOut = nTimelineIn + duration
+									pTimelineOut = nTimelineOut
+
+								else : 
+									nTimelineIn = pTimelineOut
+									nTimelineOut = nTimelineIn + duration
+									pTimelineOut = nTimelineOut
+
+								message = '%s %s-%s -> %s-%s %s' % (shotName, timelineIn, timelineOut, nTimelineIn, nTimelineOut, duration)
+								self.printLog(message)
+								logs.append(message)
+
+								# shotgun command 
+								data.update({'sg_timeline_in': nTimelineIn})
+								data.update({'sg_timeline_out': nTimelineOut})
+								batch_data.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":data})
+
+								# shotgun command backup
+								dataBk.update({'sg_timeline_in': timelineIn})
+								dataBk.update({'sg_timeline_out': timelineOut})
+								self.batch_dataBackup.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":dataBk})
+
+
+								shotCount += 1
 
 							else : 
-								nTimelineIn = pTimelineOut
-								nTimelineOut = nTimelineIn + duration
-								pTimelineOut = nTimelineOut
-
-							message = '%s %s-%s -> %s-%s %s' % (shotName, timelineIn, timelineOut, nTimelineIn, nTimelineOut, duration)
-							self.printLog(message)
-							logs.append(message)
-
-							# shotgun command 
-							data.update({'sg_timeline_in': nTimelineIn})
-							data.update({'sg_timeline_out': nTimelineOut})
-							batch_data.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":data})
-
-							# shotgun command backup
-							dataBk.update({'sg_timeline_in': timelineIn})
-							dataBk.update({'sg_timeline_out': timelineOut})
-							self.batch_dataBackup.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":dataBk})
-
-
-							shotCount += 1
+								self.printLog('shot %s skip status %s' % (shotName, status))
 
 					seqCount += 1
 
@@ -470,6 +561,7 @@ class MyForm(QtGui.QMainWindow):
 
 		# run command
 		result = self.sgBatch(batch_data)
+
 
 		return result
 
@@ -521,7 +613,7 @@ class MyForm(QtGui.QMainWindow):
 		files = fileUtils.listFile(dst)
 		validFiles = []
 
-		myDialog = Dialog2(self.backupLog)
+		myDialog = Dialog2(fileName)
 		myDialog.exec_()
 
 		selFile = myDialog.file
@@ -637,15 +729,18 @@ class MyForm(QtGui.QMainWindow):
 				# read shotgun data
 				if self.readShotgun : 
 					sgData = self.sgData
-					info = sgData[shotName]
-					sgCutIn = info['sg_cut_in']
-					sgCutOut = info['sg_cut_out']
-					sgTimelineIn = info['sg_timeline_in']
-					sgTimelineOut = info['sg_timeline_out']
-					sgDuration = info['sg_cut_duration']
-					text5 = str(sgCutIn)
-					text6 = str(sgDuration)
-					text7 = str(sgCutOut)
+
+					# check if shot really in shotgun
+					if shotName in sgData.keys() : 
+						info = sgData[shotName]
+						sgCutIn = info['sg_cut_in']
+						sgCutOut = info['sg_cut_out']
+						sgTimelineIn = info['sg_timeline_in']
+						sgTimelineOut = info['sg_timeline_out']
+						sgDuration = info['sg_cut_duration']
+						text5 = str(sgCutIn)
+						text6 = str(sgDuration)
+						text7 = str(sgCutOut)
 
 					# if not str(startTime) == str(sgCutIn) : 
 					# 	errorText.append('sg not sync')
@@ -1635,7 +1730,7 @@ class MyDialog(QtGui.QDialog, MyForm):
 # backup dialog
 class Dialog2(QtGui.QDialog, MyForm):
 
-	def __init__(self, backupPath, parent=None):
+	def __init__(self, backupFile, parent=None):
 		self.count = 0
 		#Setup Window
 		super(Dialog2, self).__init__(parent)
@@ -1643,14 +1738,20 @@ class Dialog2(QtGui.QDialog, MyForm):
 		self.ui = restoreDialog.Ui_restore_dialog()
 		self.ui.setupUi(self)
 
-		self.backupLog = backupPath
+		self.myApp = MyForm()
+		self.backupLog = self.myApp.backupLog
 		self.file = None
+		self.backupFile = backupFile
+
+
 		self.initFunctions()
+		
 
 
 	def initFunctions(self) : 
 		self.listFile()
 		self.ui.pushButton.clicked.connect(self.doRestore)
+		self.ui.latest_checkBox.stateChanged.connect(self.listFile)
 
 
 
@@ -1660,9 +1761,16 @@ class Dialog2(QtGui.QDialog, MyForm):
 
 			self.ui.listWidget.clear()
 
-			for each in files : 
-				self.ui.listWidget.addItem(each)
+			if self.ui.latest_checkBox.isChecked() : 
+				latestFile = sorted(files)[-1]
+				self.ui.listWidget.addItem(latestFile)
 
+			else : 
+
+				for each in files : 
+					print self.backupFile
+					if self.backupFile in each : 
+						self.ui.listWidget.addItem(each)
 
 
 	def doRestore(self) : 

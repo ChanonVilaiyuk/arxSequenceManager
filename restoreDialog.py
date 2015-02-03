@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'U:/extensions/studioTools/python/arxSequencerManager/restoreDialog.ui'
 #
-# Created: Tue Feb 03 00:11:18 2015
+# Created: Tue Feb 03 21:27:26 2015
 #      by: pyside-uic 0.2.14 running on PySide 1.2.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -25,6 +25,9 @@ class Ui_restore_dialog(object):
         self.listWidget = QtGui.QListWidget(restore_dialog)
         self.listWidget.setObjectName("listWidget")
         self.verticalLayout.addWidget(self.listWidget)
+        self.latest_checkBox = QtGui.QCheckBox(restore_dialog)
+        self.latest_checkBox.setObjectName("latest_checkBox")
+        self.verticalLayout.addWidget(self.latest_checkBox)
         self.pushButton = QtGui.QPushButton(restore_dialog)
         self.pushButton.setMinimumSize(QtCore.QSize(0, 30))
         self.pushButton.setObjectName("pushButton")
@@ -36,5 +39,6 @@ class Ui_restore_dialog(object):
     def retranslateUi(self, restore_dialog):
         restore_dialog.setWindowTitle(QtGui.QApplication.translate("restore_dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("restore_dialog", "Choose restore file", None, QtGui.QApplication.UnicodeUTF8))
+        self.latest_checkBox.setText(QtGui.QApplication.translate("restore_dialog", "Latest", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButton.setText(QtGui.QApplication.translate("restore_dialog", "Restore", None, QtGui.QApplication.UnicodeUTF8))
 
