@@ -41,3 +41,6 @@ backupLog:U:/extensions/studioTools/python/scriptLogs/arxSequenceManager/rollBac
 
 # script log
 scriptLog:U:/extensions/studioTools/python/scriptLogs/arxSequenceManager
+
+# shot task template id
+shotTaskTemplateID:75
