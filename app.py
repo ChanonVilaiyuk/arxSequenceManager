@@ -23,9 +23,10 @@ from shiboken import wrapInstance
 from arxSequencerManager import ui as ui
 reload(ui)
 
-from arxSequencerManager import dialog, restoreDialog
+from arxSequencerManager import dialog, restoreDialog, shotgunDialog
 reload(dialog)
 reload(restoreDialog)
+reload(shotgunDialog)
 
 from tools.utils import config, fileUtils
 reload(config)
@@ -226,10 +227,143 @@ class MyForm(QtGui.QMainWindow):
 		return allSeqInfo
 
 
-	def pullShotgunData(self) : 
+
+	def refreshShotgunDataUI(self) : 
 		self.readShotgun = True
 		self.setShotgun()
 		self.refreshUI()
+
+
+	def pullShotgunData(self) : 
+		self.readShotgun = True
+		self.setShotgun()
+
+		# compare data 
+		mayaShots = self.checkMayaSgCut()
+		sgShots = self.sgData
+		buildShotListAll = dict()
+		buildShotList = dict()
+
+		sgNewShots = []
+		removeShots = []
+		newShot = False
+		removeShot = False
+		allCutMatch = True
+
+		displayMessage = str()
+		newShotMessage = str()
+		removeShotMessage = str()
+		title = str()
+
+		shots = mc.ls(type = 'shot')
+
+		if len(shots) == 0 : 
+			allCutMatch = False
+			
+		
+		for shotName in sgShots.keys() : 
+			if not sgShots[shotName]['sg_status_list'] == 'omt' : 
+				if not shotName in mayaShots.keys() : 
+					sgNewShots.append(shotName)
+
+				if shotName in mayaShots.keys() : 
+					sgCutIn = sgShots[shotName]['sg_cut_in']
+					sgCutOut = sgShots[shotName]['sg_cut_out']
+
+					cutIn = mayaShots[shotName]['cutIn']
+					cutOut = mayaShots[shotName]['cutOut']
+
+					if not sgCutIn == cutIn : 
+						allCutMatch = False
+
+					if not sgCutOut == cutOut : 
+						allCutMatch = False
+
+
+				cameraName = '%s_cam' % shotName
+				sgShots[shotName]['camera'] = cameraName
+				buildShotListAll[shotName] = sgShots[shotName]
+
+		for shotName in mayaShots : 
+			if not shotName in sgShots.keys() : 
+				removeShots.append(shotName)
+
+
+		if sgNewShots : 
+			newShotMessage = '"%s" missing from Maya. Create %s shots?' % ((',').join(sgNewShots), len(sgNewShots))
+			newShot = True
+
+		if removeShots : 
+			removeShotMessage = '"%s" not in Shotgun. Remove %s shots?' % ((',').join(removeShots), len(removeShots))
+			removeShot = True
+
+
+		# if everything is matched, do nothing
+		if allCutMatch : 
+			self.completeDialog('Complete', 'All cut already matched')
+
+		# not match, continue
+		else : 
+
+			title = 'Confirm sync shot cutIn cutOut from shotgun'
+			displayMessage = 'Sync shots and cutIn cutOut from shotgun? (All keyframes will not change)'
+			result = self.messageBox(title, displayMessage)
+
+			if result == QtGui.QMessageBox.Ok : 
+				
+				if newShot : 
+					title = 'Create new shots?'
+					label1 = 'Create'
+					label2 = 'Do not create'
+					label3 = 'Set Shotgun status to omit'
+					result2 = self.customMessageBox(title, newShotMessage, label1, label2, label3)
+
+					if result2 == label1 : 
+						buildShotList = buildShotListAll
+
+					if result2 == label2 : 
+						buildShotList = buildShotListAll
+						for each in sgNewShots : 
+							del buildShotList[each]
+
+					if result2 == label3 : 
+						buildShotList = buildShotListAll
+						for each in sgNewShots : 
+							del buildShotList[each]
+
+				if removeShots : 
+					title = 'Remove shots?'
+					label4 = 'Remove'
+					label5 = 'Keep'
+					label6 = 'Cancel'
+					result3 = self.customMessageBox(title, removeShotMessage, label4, label5, label6)
+
+					if result3 == label5 : 
+						buildShotList = buildShotListAll
+
+						for each in removeShots : 
+							shotName = each
+							setCutIn = self.checkMayaSgCut()[shotName]['cutIn']
+							setCutOut = self.checkMayaSgCut()[shotName]['cutOut']
+							camera = '%s_cam' % shotName
+							buildShotList[each] = {'sg_cut_in': setCutIn, 'sg_cut_out': setCutOut, 'camera': camera}
+
+
+					# set shotgun to omit
+
+				for each in sorted(buildShotList) : 
+					print each
+
+				self.buildSequencerShot(buildShotList)
+
+
+
+
+
+			# self.checkSgNewShot()
+			# self.adjustMayaCutToSG()
+
+			self.refreshShotgunDataUI()
 
 
 	def pushShotgunData(self) : 	
@@ -267,7 +401,7 @@ class MyForm(QtGui.QMainWindow):
 				self.lockTimeline(False)
 				self.completeDialog('Error', 'Error: %s' % str(error))
 
-			self.refreshUI()
+			self.refreshShotgunDataUI()
 
 
 		# timeline already locked, other users updating. giving error message.
@@ -308,11 +442,134 @@ class MyForm(QtGui.QMainWindow):
 
 
 
+	def adjustMayaCutToSG(self) : 
+		result = self.messageBox('Warning', 'Set all cutIn/cutOut to match Shotgun? (Keyframes no changes)')
+		# just adjust the cutin / cutout without alter keyframes
+
+		if result == QtGui.QMessageBox.Ok : 
+			buildSource = self.checkMayaSgCut()
+
+			if buildSource : 
+				result2 = self.buildSequencerShot(buildSource)
+
+				if result2 : 
+					self.refreshUI()
+					self.completeDialog('Complete', 'Set shot cutIn / cutOut complete')
+
+				
+				else : 
+					self.completeDialog('Info', 'Shot cutIn/cutOut already matched shotgun')
+
+
+
+
+	def checkMayaSgCut(self) : 
+		allItems = self.getAllListWidgetItems()
+
+		buildShotInfo = dict()
+		shots = len(allItems)
+		changeShot = 0
+
+
+		for eachItem in allItems : 
+			shotName = eachItem[0]
+			cutIn = int(float(eachItem[1]))
+			cutOut = int(float(eachItem[3]))
+			sgCutIn = None
+			sgCutOut = None
+
+			if not eachItem[4] == 'startTime' : 
+				sgCutIn = int(eachItem[4])
+
+			if not eachItem[6] == 'endTime' : 
+				sgCutOut = int(eachItem[6])
+
+			changes = False
+
+			print shotName
+			if not cutIn == sgCutIn : 
+				print 'cutIn %s' % cutIn
+				print 'sgCutIn %s' % sgCutIn
+				changes = True
+
+			if not cutOut == sgCutOut : 
+				print 'cutOut %s' % cutOut
+				print 'sgCutOut %s' % sgCutOut
+				changes = True
+
+			print '============================='
+
+			currentCamera = mc.shot(shotName, q = True, cc = True)
+			buildShotInfo[shotName] = {'cutIn': cutIn, 'cutOut': cutOut, 'sg_cut_in': sgCutIn, 'sg_cut_out': sgCutOut, 'camera': currentCamera}
+
+			if changes : 
+				changeShot += 1
+
+
+		return buildShotInfo
+			
+
+
+		
+	def buildSequencerShot(self, buildSource) : 
+
+		buildShotInfo = buildSource
+
+		# delete all shots 
+		result = mc.delete(mc.ls(type = 'shot'))
+
+		for eachShot in buildShotInfo.keys() : 
+			shotName = eachShot
+
+			currentCamera = buildShotInfo[shotName]['camera']
+			startTime = buildShotInfo[shotName]['sg_cut_in']
+			endTime = buildShotInfo[shotName]['sg_cut_out']
+
+			# if not exists, create one
+			if not mc.objExists(currentCamera) : 
+				cam = cameraRig.referenceCamera(self.cameraRigFile, shotName)
+
+			shot = cameraRig.makeSequencerShot(shotName, currentCamera, startTime, endTime)
+			self.printLog('Create %s' % eachShot)
+			
+			try : 
+				cameraRig.linkCameraToShot(eachShot, shot)
+				self.printLog('Linked camera rig to shot %s' % eachShot)
+
+				print '================================='
+
+			except Exception as error : 
+				print error
+
+		
+		return True
+
+
+
+	def checkSgNewShot(self) : 
+		# loop check sg
+
+		mayaSceneShot = self.checkMayaSgCut()
+		newShots = dict()
+
+		for shotName in sorted(self.sgData.keys()) : 
+			if not shotName in mayaSceneShot.keys() : 
+				sgCutIn = self.sgData[shotName]['sg_cut_in']
+				sgCutOut = self.sgData[shotName]['sg_cut_out']
+				status = self.sgData[shotName]['sg_status_list']
+
+				if not status == 'omt' : 
+					newShots[shotName] = {'sgCutIn': sgCutIn, 'sgCutOut': sgCutOut}
+
+		return 
+
+
+
 	def pushMayaSgCut(self) : 
 		# pushing maya cut information to shotgun
 
 		# load shotgun data again
-		self.pullShotgunData()
+		self.refreshShotgunDataUI()
 	
 		# load all items from listWidget
 		allItems = self.getAllListWidgetItems()
@@ -630,6 +887,7 @@ class MyForm(QtGui.QMainWindow):
 
 				result = sgUtils.sg.batch(batch_data)
 
+				self.refreshShotgunDataUI()
 				self.completeDialog('Success', 'Restore previous data success.')
 
 
@@ -726,6 +984,21 @@ class MyForm(QtGui.QMainWindow):
 				text9 = ''
 
 
+				color = [20, 20, 20]
+				text1Color = [255, 255, 0]
+				text2Color = [100, 180, 255]
+				text3Color = [100, 180, 255]
+				text4Color = [100, 180, 255]
+				text5Color = [0, 200, 0]
+				text6Color = [0, 200, 0]
+				text7Color = [0, 200, 0]
+				text8Color = [200, 0, 0]
+				text9Color = [200, 0, 0]
+
+				textIndex = 0
+				textBgColor = [0, 0, 0]
+
+
 				# read shotgun data
 				if self.readShotgun : 
 					sgData = self.sgData
@@ -742,29 +1015,19 @@ class MyForm(QtGui.QMainWindow):
 						text6 = str(sgDuration)
 						text7 = str(sgCutOut)
 
-					# if not str(startTime) == str(sgCutIn) : 
-					# 	errorText.append('sg not sync')
-					# 	self.printLog('Error: sg_cut_in not sync')
-
-					# if not str(endTime) == str(sgCutOut) : 
-					# 	if not 'sg not sync' in errorText : 
-					# 		errorText.append('sg not sync')
-					# 		self.printLog('Error: sg_cut_out not sync')
+					if not str(int(startTime)) == str(int(sgCutIn)) : 
+						# errorText.append('sg not sync')
+						self.printLog('Error: sg_cut_in not sync')
+						text5Color = [200, 0, 0]
 
 
-				color = [20, 20, 20]
-				text1Color = [255, 255, 0]
-				text2Color = [100, 180, 255]
-				text3Color = [100, 180, 255]
-				text4Color = [100, 180, 255]
-				text5Color = [0, 200, 0]
-				text6Color = [0, 200, 0]
-				text7Color = [0, 200, 0]
-				text8Color = [200, 0, 0]
-				text9Color = [200, 0, 0]
+					if not str(int(endTime)) == str(int(sgCutOut)) : 
+						if not 'sg not sync' in errorText : 
+							# errorText.append('sg not sync')
+							self.printLog('Error: sg_cut_out not sync')
+							text7Color = [200, 0, 0]
 
-				textIndex = 0
-				textBgColor = [0, 0, 0]
+
 
 				# check if disabled
 				if mute : 
@@ -1162,7 +1425,8 @@ class MyForm(QtGui.QMainWindow):
 
 
 
-		self.refreshUI()
+		self.refreshShotgunDataUI()
+		# self.refreshUI()
 
 
 	def doShotEditDuration(self) : 
@@ -1781,3 +2045,11 @@ class Dialog2(QtGui.QDialog, MyForm):
 
 			self.file = item
 			self.close()
+
+
+class shotgunDialog(QtGui.QDialog, MyForm):
+
+	def __init__(self, backupFile, parent=None):
+		self.count = 0
+		#Setup Window
+		super(shotgunDialog, self).__init__(parent)
