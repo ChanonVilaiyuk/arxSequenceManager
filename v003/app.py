@@ -261,7 +261,7 @@ class MyForm(QtGui.QMainWindow):
 			allCutMatch = False
 			
 		
-		for shotName in sorted(sgShots.keys()) : 
+		for shotName in sgShots.keys() : 
 			if not sgShots[shotName]['sg_status_list'] == 'omt' : 
 				if not shotName in mayaShots.keys() : 
 					sgNewShots.append(shotName)
@@ -375,7 +375,7 @@ class MyForm(QtGui.QMainWindow):
 
 		# if lock timeline success, then proceed
 		if lockTimeline == True : 
- 
+
 			try : 
 
 				# update cut in, cut out
@@ -763,19 +763,13 @@ class MyForm(QtGui.QMainWindow):
 					nTimelineIn = 0
 					nTimelineOut = 0
 
-					seqInfo, shots = self.reArrangeShotByTime(self.allSeqInfo[eachSequence])
-
-					# for eachShot in sorted(self.allSeqInfo[eachSequence]) : 
-					for eachShot in shots : 
-						shotName = seqInfo[eachShot]['code']
-						timelineIn = seqInfo[eachShot]['sg_timeline_in']
-						timelineOut = seqInfo[eachShot]['sg_timeline_out']
-						cutIn = seqInfo[eachShot]['sg_cut_in']
-						cutOut = seqInfo[eachShot]['sg_cut_out']
-
-						duration = seqInfo[eachShot]['sg_cut_duration']
-						entityID = seqInfo[eachShot]['id']
-						status = seqInfo[eachShot]['sg_status_list']
+					for eachShot in sorted(self.allSeqInfo[eachSequence]) : 
+						shotName = eachShot['code']
+						timelineIn = eachShot['sg_timeline_in']
+						timelineOut = eachShot['sg_timeline_out']
+						duration = eachShot['sg_cut_duration']
+						entityID = eachShot['id']
+						status = eachShot['sg_status_list']
 						data = dict()
 						dataBk = dict()
 
@@ -827,30 +821,6 @@ class MyForm(QtGui.QMainWindow):
 
 
 		return result
-
-
-
-	def reArrangeShotByTime(self, inputSeq) : 
-		seqInfo = dict()
-		timeSorted = dict()
-		shots = []
-
-		for each in inputSeq : 
-			shotName = each['code']
-			cutIn = each['sg_cut_in']
-			cutOut = each['sg_cut_out']
-			status = each['sg_status_list']
-
-			if not 'layout' in shotName : 
-				if not status == 'omt' : 
-					seqInfo[shotName] = each
-					timeSorted[cutIn] = shotName
-
-
-		for each in sorted(timeSorted.keys()) : 
-			shots.append(timeSorted[each])
-
-		return seqInfo, shots
 
 
 
@@ -928,20 +898,9 @@ class MyForm(QtGui.QMainWindow):
 	def getShotInfo(self) : 
 		shots = mc.ls(type = 'shot')
 		shotInfo = dict()
-		tmpDict = dict()
-		sortedShotByTime = []
 		i = 0
 
 		for eachShot in shots : 
-			startTime = mc.shot(eachShot, q = True, startTime = True)
-			tmpDict[startTime] = eachShot
-
-		for each in sorted(tmpDict.keys()) : 
-			sortedShotByTime.append(tmpDict[each])
-
-
-		# for eachShot in shots : 
-		for eachShot in sortedShotByTime : 
 			startTime = mc.shot(eachShot, q = True, startTime = True)
 			endTime = mc.shot(eachShot, q = True, endTime = True)
 			duration = mc.shot(eachShot, q = True, sourceDuration = True)
@@ -952,15 +911,14 @@ class MyForm(QtGui.QMainWindow):
 			gapEnd = False
 
 			if not i == 0 : 
-				previousEndFrame = mc.shot(sortedShotByTime[i-1], q = True, endTime = True)
+				previousEndFrame = mc.shot(shots[i-1], q = True, endTime = True)
 
 				if not (startTime - previousEndFrame) == 1 : 
 					gapStart = True
 
 
 			if not i == (len(shots) - 1) : 
-				# nextShotStartFrame = mc.shot(shots[i+1], q = True, startTime = True)
-				nextShotStartFrame = mc.shot(sortedShotByTime[i+1], q = True, startTime = True)
+				nextShotStartFrame = mc.shot(shots[i+1], q = True, startTime = True)
 
 				if not (nextShotStartFrame - endTime) == 1 : 
 					gapEnd = True
@@ -994,19 +952,7 @@ class MyForm(QtGui.QMainWindow):
 		if self.shotInfo : 
 			self.occupiedFrame = []
 
-			# re-arrange shot by number 
-			tmpDict = dict()
-			timeSorted = []
-			for eachShot in self.shotInfo : 
-				startTime = self.shotInfo[eachShot]['startTime']
-				tmpDict[startTime] = eachShot
-
-			for each in sorted(tmpDict.keys()) : 
-				timeSorted.append(tmpDict[each])
-
-
-			# for eachShot in sorted(self.shotInfo) : 
-			for eachShot in timeSorted : 
+			for eachShot in sorted(self.shotInfo) : 
 
 				shotName = eachShot 
 				startTime = self.shotInfo[eachShot]['startTime']
