@@ -388,6 +388,8 @@ class MyForm(QtGui.QMainWindow):
 
 
 
+
+
 				# self.checkSgNewShot()
 				# self.adjustMayaCutToSG()
 
@@ -835,16 +837,12 @@ class MyForm(QtGui.QMainWindow):
 
 								# shotgun command 
 								data.update({'sg_timeline_in': nTimelineIn})
-								data.update({'sg_cut_in': nTimelineIn})
 								data.update({'sg_timeline_out': nTimelineOut})
-								data.update({'sg_cut_out': nTimelineOut})
 								batch_data.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":data})
 
 								# shotgun command backup
 								dataBk.update({'sg_timeline_in': timelineIn})
-								dataBk.update({'sg_cut_in': timelineIn})
 								dataBk.update({'sg_timeline_out': timelineOut})
-								dataBk.update({'sg_cut_out': timelineOut})
 								self.batch_dataBackup.append({"request_type":"update","entity_type":"Shot","entity_id":entityID, "data":dataBk})
 
 
